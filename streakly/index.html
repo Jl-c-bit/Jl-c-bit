@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Streakly: Build Habits That Stick</title>
+  <meta name="description" content="A fast, private habit tracker. Build streaks, see your progress, and keep your data on your device. Works offline.">
+  <meta name="theme-color" content="#16a34a">
+  <meta property="og:title" content="Streakly: Build Habits That Stick">
+  <meta property="og:description" content="Private, offline-first habit tracker with streaks and heatmaps.">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="logo">🔥</span> Streakly</div>
+    <div class="topbar-actions">
+      <span id="pro-badge" class="badge" hidden>PRO</span>
+      <button id="upgrade-btn" class="btn btn-pro">Go Pro</button>
+      <button id="menu-btn" class="icon-btn" aria-label="Settings">⚙️</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero-card">
+      <div>
+        <div class="muted" id="today-label"></div>
+        <h1 id="summary-title">Let's build some habits</h1>
+      </div>
+      <div class="ring" id="progress-ring" aria-label="Today's progress">
+        <svg viewBox="0 0 36 36"><circle class="ring-bg" cx="18" cy="18" r="15.9"/><circle id="ring-fg" class="ring-fg" cx="18" cy="18" r="15.9" stroke-dasharray="0 100"/></svg>
+        <span id="ring-text">0%</span>
+      </div>
+    </section>
+
+    <ul id="habit-list" class="habit-list"></ul>
+
+    <div id="empty" class="empty" hidden>
+      <p class="empty-emoji">🌱</p>
+      <p>No habits yet. Start with one small thing you can do every day.</p>
+      <div class="suggestions" id="suggestions"></div>
+    </div>
+
+    <button id="add-btn" class="btn btn-primary btn-block">+ Add habit</button>
+    <p id="limit-note" class="muted center small" hidden></p>
+  </main>
+
+  <!-- Add habit -->
+  <dialog id="add-dialog">
+    <form method="dialog" id="add-form">
+      <h2>New habit</h2>
+      <label>Name<input id="habit-name" maxlength="60" required placeholder="e.g. Read 10 pages" autocomplete="off"></label>
+      <label>Emoji</label>
+      <div class="picker" id="emoji-picker"></div>
+      <label>Color</label>
+      <div class="picker" id="color-picker"></div>
+      <menu>
+        <button value="cancel" formnovalidate class="btn">Cancel</button>
+        <button value="ok" class="btn btn-primary">Add</button>
+      </menu>
+    </form>
+  </dialog>
+
+  <!-- Habit details (Pro stats) -->
+  <dialog id="detail-dialog">
+    <div id="detail-body"></div>
+    <menu>
+      <button id="delete-habit" class="btn btn-danger">Delete</button>
+      <button id="close-detail" class="btn btn-primary">Close</button>
+    </menu>
+  </dialog>
+
+  <!-- Paywall -->
+  <dialog id="pro-dialog">
+    <div class="paywall">
+      <p class="paywall-emoji">🚀</p>
+      <h2>Streakly Pro</h2>
+      <p class="muted">One payment. Yours forever. No subscription.</p>
+      <ul class="perks">
+        <li>♾️ Unlimited habits (free plan: 3)</li>
+        <li>📊 Full-year heatmap and detailed stats</li>
+        <li>🎨 Premium themes: Sunset and Ocean</li>
+        <li>💚 Support an independent, ad-free app</li>
+      </ul>
+      <a id="buy-link" class="btn btn-pro btn-block" target="_blank" rel="noopener">Unlock Pro</a>
+      <button id="restore-btn" class="link-btn">Already paid? Restore purchase</button>
+      <button id="close-pro" class="link-btn">Maybe later</button>
+    </div>
+  </dialog>
+
+  <!-- Settings -->
+  <dialog id="settings-dialog">
+    <h2>Settings</h2>
+    <label>Theme
+      <select id="theme-select">
+        <option value="system">System</option>
+        <option value="light">Light</option>
+        <option value="dark">Dark</option>
+        <option value="sunset">Sunset (Pro)</option>
+        <option value="ocean">Ocean (Pro)</option>
+      </select>
+    </label>
+    <div class="row">
+      <button id="export-btn" class="btn">Export data</button>
+      <label class="btn file-btn">Import<input id="import-input" type="file" accept="application/json" hidden></label>
+    </div>
+    <button id="share-app" class="btn btn-block">📣 Tell a friend</button>
+    <p class="muted small">Your data stays on this device. Streakly has no ads and no tracking.</p>
+    <menu><button id="close-settings" class="btn btn-primary">Done</button></menu>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <div id="confetti" aria-hidden="true"></div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
