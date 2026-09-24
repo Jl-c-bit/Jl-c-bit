@@ -3,4 +3,4 @@
 // redirect to: https://<your-domain>/?upgraded=1
 export const PAYMENT_LINK = "https://buy.stripe.com/eVqfZh2Wc6ZL2kLaZCafS07";
 export const PRO_PRICE_LABEL = "$4.99 one-time";
-export const SUPPORT_EMAIL = "support@example.com";
+export const SUPPORT_EMAIL = "streaklyapp05@gmail.com";
