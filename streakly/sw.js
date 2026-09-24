@@ -1,5 +1,5 @@
 // Offline support: serve the app shell from cache, refresh it in the background.
-const CACHE = "streakly-v1";
+const CACHE = "streakly-v2";
 const ASSETS = ["./", "index.html", "styles.css", "app.js", "core.js", "config.js", "manifest.webmanifest", "icon.svg"];
 
 self.addEventListener("install", (e) => {

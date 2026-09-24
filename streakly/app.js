@@ -51,6 +51,7 @@ function render() {
   const total = state.habits.length;
   const pct = total ? Math.round((done / total) * 100) : 0;
   $("#ring-fg").setAttribute("stroke-dasharray", `${pct} 100`);
+  $("#ring-fg").style.opacity = pct ? 1 : 0;
   $("#ring-text").textContent = `${pct}%`;
   $("#summary-title").textContent = !total
     ? "Let's build some habits"
