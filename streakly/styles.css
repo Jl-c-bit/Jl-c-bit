@@ -142,9 +142,6 @@ dialog input:not([type="file"]), dialog select {
 
 .paywall { text-align: center; }
 .paywall-emoji { font-size: 3rem; margin: 0; }
-.checkout-box { margin-top: 16px; text-align: left; }
-#whop-checkout { min-height: 120px; }
-#whop-checkout iframe { width: 100%; border: 0; }
 .perks { text-align: left; list-style: none; padding: 0; margin: 20px 0 0; display: grid; gap: 10px; }
 
 .toast {

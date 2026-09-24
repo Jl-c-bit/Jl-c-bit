@@ -17,7 +17,7 @@ with no backend, so hosting is free and the costs stay near zero as it grows.
 
 ## Monetization
 
-| Free                         | Pro ($4.99 one-time, via Whop)           |
+| Free                         | Pro ($4.99 one-time)                     |
 | ---------------------------- | ---------------------------------------- |
 | Up to 3 habits               | Unlimited habits                         |
 | Current streak, 4-week grid  | Full-year heatmap, best streak, 30-day rate, totals |
@@ -26,33 +26,17 @@ with no backend, so hosting is free and the costs stay near zero as it grows.
 The limit of three habits lets people get hooked before they hit the paywall. By the time
 someone wants a fourth habit, they've already built a streak.
 
-### Set up payments with Whop (5 minutes)
+### Set up payments (5 minutes)
 
-Checkout is embedded right in the paywall using
-[Whop's embedded checkout](https://docs.whop.com/payments/checkout-embed), so buyers never leave the app.
-Whop hosts the payment form, sends receipts and handles payouts.
-
-1. Create a Whop account and a product called "Streakly Pro".
-2. Add a **one-time** plan at your price (the paywall label defaults to $4.99).
-3. Copy the plan ID (it starts with `plan_`) into `config.js` as `WHOP_PLAN_ID`.
-   Update `PRO_PRICE_LABEL` if you change the price, and set `SUPPORT_EMAIL`.
-4. To test first, set `WHOP_ENVIRONMENT = "sandbox"` and use a sandbox plan ID.
-   Switch it back to `"production"` before launch.
-
-How the unlock works:
-- **In-page payment:** Whop calls `streaklyWhopComplete(planId, receiptId)`. The app
-  unlocks Pro and saves the receipt ID, which shows under Settings for support requests.
-- **Redirected payment** (payment methods that leave the page): Whop sends the buyer back to the app with
-  `?status=success` or `?status=error`, and the app unlocks Pro or shows an error.
-- Whop's script loads only when someone taps "Unlock Pro", so free users never load third-party code.
-  Until `WHOP_PLAN_ID` is set, the paywall says checkout isn't set up instead of showing a broken form.
+1. Create a Stripe **Payment Link** for "Streakly Pro".
+2. In the link's settings, under *After payment*, redirect to `https://<your-domain>/?upgraded=1`.
+3. Put the link in `config.js` as `PAYMENT_LINK`, and set `SUPPORT_EMAIL` too.
 
 > **Honest caveat:** Pro is unlocked on the device, with no server check. Someone
 > technical could unlock it for free. This is normal for a $5 MVP and not worth
-> fighting at first. If revenue justifies it, add a small server that confirms
-> purchases with Whop's API or webhooks, or use Whop license keys. Another option is to wrap
-> the app for the app stores and use in-app purchases (see below).
-> Buyers who switch devices can email support with their receipt ID.
+> fighting at first. If revenue justifies it, add license keys (Gumroad or
+> Lemon Squeezy license API) or wrap the app for the app stores and use
+> in-app purchases (see below).
 
 ## Run locally
 
@@ -84,6 +68,6 @@ Any static host works. To use GitHub Pages: go to Settings → Pages, deploy fro
 | --- | --- |
 | `core.js` | Pure logic: streaks, stats, the free-tier limit, data sanitizing (unit-tested) |
 | `app.js` | UI, paywall, sharing, import and export |
-| `config.js` | Whop plan ID and environment, price label, support email |
+| `config.js` | Payment link, price label, support email |
 | `sw.js`, `manifest.webmanifest` | Offline support and install-to-home-screen |
 | `test/` | `node:test` unit tests |
