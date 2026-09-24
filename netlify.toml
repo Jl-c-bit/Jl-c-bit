@@ -1,0 +1,3 @@
+# Netlify serves only the Streakly app, so it lives at the site root.
+[build]
+  publish = "streakly"
