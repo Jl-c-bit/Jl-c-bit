@@ -1,0 +1,11 @@
+{
+  "name": "streakly",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Streakly: a freemium habit tracker PWA",
+  "scripts": {
+    "test": "node --test",
+    "start": "npx --yes serve -l 5173 ."
+  }
+}
