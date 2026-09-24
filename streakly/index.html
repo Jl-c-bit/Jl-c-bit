@@ -84,7 +84,12 @@
         <li>🎨 Premium themes: Sunset and Ocean</li>
         <li>💚 Support an independent, ad-free app</li>
       </ul>
-      <a id="buy-link" class="btn btn-pro btn-block" target="_blank" rel="noopener">Unlock Pro</a>
+      <button id="buy-btn" class="btn btn-pro btn-block">Unlock Pro</button>
+      <div id="checkout-box" class="checkout-box" hidden>
+        <p id="checkout-status" class="muted small">Loading secure checkout…</p>
+        <div id="whop-checkout"></div>
+        <p class="muted small">Payments are processed securely by Whop.</p>
+      </div>
       <button id="restore-btn" class="link-btn">Already paid? Restore purchase</button>
       <button id="close-pro" class="link-btn">Maybe later</button>
     </div>
@@ -107,6 +112,7 @@
       <label class="btn file-btn">Import<input id="import-input" type="file" accept="application/json" hidden></label>
     </div>
     <button id="share-app" class="btn btn-block">📣 Tell a friend</button>
+    <p id="receipt-line" class="muted small" hidden></p>
     <p class="muted small">Your data stays on this device. Streakly has no ads and no tracking.</p>
     <menu><button id="close-settings" class="btn btn-primary">Done</button></menu>
   </dialog>

@@ -1,8 +1,9 @@
 import {
   dateKey, currentStreak, longestStreak, completionRate, lastNDays, canAddHabit,
   toggleDay, createHabit, milestoneReached, sanitizeState, emptyState, parseKey, FREE_HABIT_LIMIT,
+  checkoutReturnStatus, cleanReceiptId,
 } from "./core.js";
-import { PAYMENT_LINK, PRO_PRICE_LABEL, SUPPORT_EMAIL } from "./config.js";
+import { WHOP_PLAN_ID, WHOP_ENVIRONMENT, PRO_PRICE_LABEL, SUPPORT_EMAIL } from "./config.js";
 
 const STORAGE_KEY = "streakly:v1";
 const EMOJIS = ["✅", "📚", "🏃", "💧", "🧘", "🥗", "💤", "✍️", "🎸", "💪", "🧹", "🚭", "🌞", "💊", "🙏", "💰"];
@@ -12,6 +13,8 @@ const SUGGESTIONS = [
   ["🏃", "Move for 20 minutes"], ["🧘", "Meditate 5 minutes"],
 ];
 const PRO_THEMES = new Set(["sunset", "ocean"]);
+const WHOP_LOADER = "https://js.whop.com/static/checkout/loader.js";
+const WHOP_CONFIGURED = /^plan_[A-Za-z0-9]+$/.test(WHOP_PLAN_ID) && WHOP_PLAN_ID !== "plan_REPLACE_ME";
 
 const $ = (sel) => document.querySelector(sel);
 let state = load();
@@ -45,6 +48,8 @@ function render() {
   applyTheme();
   $("#pro-badge").hidden = !state.pro;
   $("#upgrade-btn").hidden = state.pro;
+  $("#receipt-line").hidden = !state.proReceipt;
+  $("#receipt-line").textContent = state.proReceipt ? `Pro receipt: ${state.proReceipt}` : "";
   $("#today-label").textContent = parseKey(today).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
 
   const done = state.habits.filter((h) => h.log[today]).length;
@@ -155,13 +160,80 @@ function renderPickers() {
 }
 
 function openPro() {
-  $("#buy-link").href = PAYMENT_LINK;
-  $("#buy-link").textContent = `Unlock Pro · ${PRO_PRICE_LABEL}`;
+  $("#buy-btn").textContent = `Unlock Pro · ${PRO_PRICE_LABEL}`;
+  $("#buy-btn").hidden = false;
+  $("#checkout-box").hidden = true;
   $("#pro-dialog").showModal();
 }
 
-function unlockPro() {
+// ---------- Whop checkout ----------
+// The embed is a <div data-whop-checkout-plan-id> that Whop's loader script
+// turns into an in-page checkout iframe. The loader is fetched only when a
+// buyer asks to pay, so free users never load third-party code.
+
+let whopLoading = null;
+function loadWhop() {
+  whopLoading ??= new Promise((resolve, reject) => {
+    const s = Object.assign(document.createElement("script"), { src: WHOP_LOADER, async: true });
+    s.onload = resolve;
+    s.onerror = () => {
+      whopLoading = null;
+      s.remove();
+      reject(new Error("Whop checkout failed to load"));
+    };
+    document.head.appendChild(s);
+  });
+  return whopLoading;
+}
+
+function whopTheme() {
+  const t = document.documentElement.dataset.theme;
+  if (t === "dark" || t === "ocean") return "dark";
+  if (t === "light" || t === "sunset") return "light";
+  return matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
+async function startCheckout() {
+  const status = $("#checkout-status");
+  $("#buy-btn").hidden = true;
+  $("#checkout-box").hidden = false;
+  if (!WHOP_CONFIGURED) {
+    status.textContent = "Checkout isn't set up yet. Set WHOP_PLAN_ID in config.js.";
+    return;
+  }
+  status.textContent = "Loading secure checkout…";
+  const mount = $("#whop-checkout");
+  // Recreate the element each time so Whop mounts a fresh checkout.
+  const el = document.createElement("div");
+  Object.assign(el.dataset, {
+    whopCheckoutPlanId: WHOP_PLAN_ID,
+    whopCheckoutTheme: whopTheme(),
+    whopCheckoutReturnUrl: location.origin + location.pathname,
+    whopCheckoutOnComplete: "streaklyWhopComplete",
+  });
+  if (WHOP_ENVIRONMENT === "sandbox") el.dataset.whopCheckoutEnvironment = "sandbox";
+  mount.replaceChildren(el);
+  try {
+    await loadWhop();
+    status.textContent = "";
+  } catch {
+    status.textContent = "Couldn't reach the payment provider. Check your connection and try again.";
+    $("#buy-btn").hidden = false;
+  }
+}
+
+// Whop calls this global by name (data-whop-checkout-on-complete) once the
+// payment succeeds in-page, with (planId, receiptId).
+window.streaklyWhopComplete = (planId, receiptId) => {
+  if (planId && planId !== WHOP_PLAN_ID) return;
+  $("#pro-dialog").close();
+  $("#whop-checkout").replaceChildren();
+  unlockPro(receiptId);
+};
+
+function unlockPro(receiptId) {
   state.pro = true;
+  state.proReceipt = cleanReceiptId(receiptId) ?? state.proReceipt;
   save();
   render();
   celebrate("Welcome to Streakly Pro! Thank you for your support 💚", true);
@@ -257,6 +329,7 @@ $("#delete-habit").addEventListener("click", () => {
 });
 
 $("#upgrade-btn").addEventListener("click", openPro);
+$("#buy-btn").addEventListener("click", startCheckout);
 $("#close-pro").addEventListener("click", () => $("#pro-dialog").close());
 $("#restore-btn").addEventListener("click", () => {
   location.href = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent("Restore Streakly Pro")}&body=${encodeURIComponent("Receipt email or order ID:")}`;
@@ -292,7 +365,7 @@ $("#import-input").addEventListener("change", async (e) => {
   try {
     const imported = sanitizeState(JSON.parse(await file.text()));
     // Pro status comes from purchase on this device, never from an import file.
-    state = { ...imported, pro: state.pro };
+    state = { ...imported, pro: state.pro, proReceipt: state.proReceipt };
     save();
     render();
     toast(`Imported ${state.habits.length} habit(s)`);
@@ -311,11 +384,12 @@ $("#share-app").addEventListener("click", () => {
 document.addEventListener("visibilitychange", () => !document.hidden && render());
 setInterval(render, 60_000);
 
-// Returning from the Stripe Payment Link success redirect.
-const params = new URLSearchParams(location.search);
-if (params.get("upgraded") === "1") {
+// Returning from a Whop checkout whose payment method had to leave the page.
+const checkoutStatus = checkoutReturnStatus(location.search);
+if (checkoutStatus) {
   history.replaceState(null, "", location.pathname);
-  unlockPro();
+  if (checkoutStatus === "success") unlockPro();
+  else toast("Payment didn't go through. Please try again.");
 }
 
 if ("serviceWorker" in navigator && location.protocol !== "file:") {

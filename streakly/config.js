@@ -1,6 +1,7 @@
-// Monetization settings. Replace PAYMENT_LINK with your own Stripe Payment Link
-// (https://dashboard.stripe.com/payment-links) and set its "after payment"
-// redirect to: https://<your-domain>/?upgraded=1
-export const PAYMENT_LINK = "https://buy.stripe.com/REPLACE_ME";
+// Monetization settings (Whop). In your Whop dashboard create a product with a
+// one-time plan, then copy the plan ID (it starts with "plan_") into WHOP_PLAN_ID.
+export const WHOP_PLAN_ID = "plan_REPLACE_ME";
+// "production" for real payments, "sandbox" to test with Whop's sandbox.
+export const WHOP_ENVIRONMENT = "production";
 export const PRO_PRICE_LABEL = "$4.99 one-time";
 export const SUPPORT_EMAIL = "support@example.com";

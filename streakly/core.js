@@ -100,7 +100,19 @@ export function milestoneReached(before, after) {
 }
 
 export function emptyState() {
-  return { version: 1, pro: false, theme: "system", habits: [] };
+  return { version: 1, pro: false, proReceipt: null, theme: "system", habits: [] };
+}
+
+// Whop redirects back to the return URL with ?status=success|error when a
+// payment method (e.g. PayPal, 3-D Secure) had to leave the page.
+export function checkoutReturnStatus(search) {
+  const status = new URLSearchParams(search).get("status");
+  return status === "success" || status === "error" ? status : null;
+}
+
+// Whop receipt/payment IDs look like "pay_XXXX"; keep only safe characters.
+export function cleanReceiptId(id) {
+  return typeof id === "string" && /^[A-Za-z0-9_-]{1,64}$/.test(id) ? id : null;
 }
 
 // Accepts untrusted JSON (from storage or an import file) and returns a
@@ -111,6 +123,7 @@ export function sanitizeState(raw) {
   const keyRe = /^\d{4}-\d{2}-\d{2}$/;
   const habits = Array.isArray(raw.habits) ? raw.habits : [];
   base.pro = raw.pro === true;
+  base.proReceipt = cleanReceiptId(raw.proReceipt);
   base.theme = ["system", "light", "dark", "sunset", "ocean"].includes(raw.theme) ? raw.theme : "system";
   base.habits = habits
     .filter((h) => h && typeof h.name === "string" && h.name.trim())

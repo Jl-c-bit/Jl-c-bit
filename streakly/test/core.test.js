@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   addDays, currentStreak, longestStreak, completionRate, canAddHabit,
   toggleDay, createHabit, milestoneReached, sanitizeState, lastNDays, FREE_HABIT_LIMIT,
+  checkoutReturnStatus, cleanReceiptId,
 } from "../core.js";
 
 const log = (...days) => Object.fromEntries(days.map((d) => [d, true]));
@@ -83,4 +84,19 @@ test("sanitizeState drops malformed data", () => {
   assert.equal(s.habits[0].color, "#22c55e");
   assert.deepEqual(s.habits[0].log, { "2026-09-24": true });
   assert.deepEqual(sanitizeState("garbage").habits, []);
+});
+
+test("checkoutReturnStatus reads Whop's return status", () => {
+  assert.equal(checkoutReturnStatus("?status=success"), "success");
+  assert.equal(checkoutReturnStatus("?status=error&foo=1"), "error");
+  assert.equal(checkoutReturnStatus("?status=hacked"), null);
+  assert.equal(checkoutReturnStatus(""), null);
+});
+
+test("cleanReceiptId accepts Whop IDs and rejects junk", () => {
+  assert.equal(cleanReceiptId("pay_abc123"), "pay_abc123");
+  assert.equal(cleanReceiptId("<script>"), null);
+  assert.equal(cleanReceiptId(42), null);
+  assert.equal(sanitizeState({ proReceipt: "pay_x1" }).proReceipt, "pay_x1");
+  assert.equal(sanitizeState({ proReceipt: "bad id!" }).proReceipt, null);
 });
