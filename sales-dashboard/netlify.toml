@@ -1,0 +1,8 @@
+# Netlify site for the sales dashboard. Set the site's base directory to
+# `sales-dashboard` so this file (not the repo-root Streakly config) is used.
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[functions]
+  directory = "netlify/functions"
