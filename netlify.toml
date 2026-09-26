@@ -1,3 +1,10 @@
-# Netlify serves only the Streakly app, so it lives at the site root.
+# One Netlify site serves both apps: Streakly at the root and PrivatePDF
+# under /pdf/. The build copies each app into dist/ (no install step).
 [build]
-  publish = "streakly"
+  command = "rm -rf dist && mkdir -p dist/pdf && cp -R streakly/. dist/ && cp -R privatepdf/. dist/pdf/ && rm -rf dist/pdf/test dist/pdf/tools dist/pdf/package.json dist/pdf/netlify.toml dist/pdf/README.md"
+  publish = "dist"
+
+[[headers]]
+  for = "/pdf/assets/vendor/*"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"

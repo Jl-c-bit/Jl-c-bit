@@ -5,7 +5,10 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
-const SITE_URL = "https://private-pdf.netlify.app";
+// The site is served from the Streakly Netlify site under /pdf/. For a
+// standalone site at the root, build with BASE_PATH="" and change SITE_URL.
+const SITE_URL = "https://chimerical-crostata-fb89ec.netlify.app";
+const BASE = process.env.BASE_PATH ?? "/pdf";
 const BRAND = "PrivatePDF";
 
 const TOOLS = [
@@ -119,24 +122,24 @@ function head({ title, description, path }) {
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>${esc(title)} | ${BRAND}</title>
   <meta name="description" content="${esc(description)}">
-  <link rel="canonical" href="${SITE_URL}${path}">
+  <link rel="canonical" href="${SITE_URL}${BASE}${path}">
   <meta property="og:title" content="${esc(title)}">
   <meta property="og:description" content="${esc(description)}">
   <meta property="og:type" content="website">
   <meta name="theme-color" content="#2f45c8">
-  <link rel="icon" href="/assets/icon.svg" type="image/svg+xml">
+  <link rel="icon" href="${BASE}/assets/icon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@600;800&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
-  <link rel="stylesheet" href="/assets/styles.css">
+  <link rel="stylesheet" href="${BASE}/assets/styles.css">
 </head>`;
 }
 
 function header(active) {
-  const links = TOOLS.map((t) => `<a href="/${t.slug}/"${t.slug === active ? ' aria-current="page"' : ""}>${t.name}</a>`).join("");
+  const links = TOOLS.map((t) => `<a href="${BASE}/${t.slug}/"${t.slug === active ? ' aria-current="page"' : ""}>${t.name}</a>`).join("");
   return `<header class="top">
   <div class="top-row">
-    <a class="brand" href="/">${icon("lock", "brand-ico")}${BRAND}</a>
+    <a class="brand" href="${BASE}/">${icon("lock", "brand-ico")}${BRAND}</a>
     <span class="plan" id="plan-chip" hidden>PRO</span>
     <button class="btn pro" id="upgrade-btn" type="button">Go Pro</button>
   </div>
@@ -145,7 +148,7 @@ function header(active) {
 }
 
 const footer = `<footer class="foot">
-  <div class="foot-tools">${TOOLS.map((t) => `<a href="/${t.slug}/">${t.name}</a>`).join("")}</div>
+  <div class="foot-tools">${TOOLS.map((t) => `<a href="${BASE}/${t.slug}/">${t.name}</a>`).join("")}</div>
   <p>${BRAND} runs in your browser. Your files are never uploaded.</p>
   <p>Questions? <span class="email" id="support-email"></span></p>
 </footer>`;
@@ -205,7 +208,7 @@ ${header(t.slug)}
 </main>
 ${footer}
 ${proDialog}
-<script type="module" src="/assets/app.js"></script>
+<script type="module" src="${BASE}/assets/app.js"></script>
 </body>
 </html>
 `;
@@ -221,7 +224,7 @@ ${header("")}
     <p class="lede">Merge, split, compress and convert PDFs in your browser. Nothing is uploaded, so it's fast and private.</p>
   </section>
   <section class="grid" aria-label="Tools">
-    ${TOOLS.map((t) => `<a class="card" href="/${t.slug}/">${icon(t.icon, "card-ico")}<span class="card-name">${t.name}</span><span class="card-desc">${esc(t.lede)}</span></a>`).join("")}
+    ${TOOLS.map((t) => `<a class="card" href="${BASE}/${t.slug}/">${icon(t.icon, "card-ico")}<span class="card-name">${t.name}</span><span class="card-desc">${esc(t.lede)}</span></a>`).join("")}
   </section>
   <section class="why">
     <div><h2>Private by design</h2><p>Other PDF sites upload your documents to their servers. ${BRAND} does all the work on your phone or computer.</p></div>
@@ -232,7 +235,7 @@ ${header("")}
 </main>
 ${footer}
 ${proDialog}
-<script type="module" src="/assets/app.js"></script>
+<script type="module" src="${BASE}/assets/app.js"></script>
 </body>
 </html>
 `;
@@ -248,8 +251,8 @@ write("index.html", homePage());
 for (const t of TOOLS) write(`${t.slug}/index.html`, toolPage(t));
 write("sitemap.xml", `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${["/", ...TOOLS.map((t) => `/${t.slug}/`)].map((p) => `  <url><loc>${SITE_URL}${p}</loc></url>`).join("\n")}
+${["/", ...TOOLS.map((t) => `/${t.slug}/`)].map((p) => `  <url><loc>${SITE_URL}${BASE}${p}</loc></url>`).join("\n")}
 </urlset>
 `);
-write("robots.txt", `User-agent: *\nAllow: /\nSitemap: ${SITE_URL}/sitemap.xml\n`);
+write("robots.txt", `User-agent: *\nAllow: /\nSitemap: ${SITE_URL}${BASE}/sitemap.xml\n`);
 console.log(`Built ${TOOLS.length + 1} pages`);

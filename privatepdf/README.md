@@ -21,8 +21,7 @@ Like Streakly, Pro is unlocked on the device with no server check.
 
 Each tool has its own page (`/merge-pdf/`, `/compress-pdf/`, …) with its own
 title, description and FAQ, so each can rank in Google for its search term.
-After the site's final address is known, update `SITE_URL` in `tools/build.mjs`,
-run `npm run build`, and submit `sitemap.xml` in Google Search Console.
+Submit `/pdf/sitemap.xml` in Google Search Console so Google finds every tool page.
 
 ## Develop
 
@@ -35,11 +34,16 @@ npm start        # serve on http://localhost:5175
 
 Pages are generated: edit `tools/build.mjs`, not the HTML files.
 
-## Deploy on Netlify
+## Deploy
 
-Create a new Netlify site from this repository and set **Base directory** to
-`privatepdf`. Netlify then uses `privatepdf/netlify.toml`, which publishes the
-folder as is (no build step).
+PrivatePDF is served by the same Netlify site as Streakly, under `/pdf/`
+(`https://chimerical-crostata-fb89ec.netlify.app/pdf/`). The repository's root
+`netlify.toml` copies both apps into one folder on every push to `main`, so
+merging a change publishes it automatically.
+
+To move PrivatePDF to its own site later, create a Netlify site with base
+directory `privatepdf`, rebuild the pages with `BASE_PATH="" npm run build`,
+and update `SITE_URL` in `tools/build.mjs`.
 
 ## Libraries
 
