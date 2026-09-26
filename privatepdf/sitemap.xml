@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://private-pdf.netlify.app/</loc></url>
+  <url><loc>https://private-pdf.netlify.app/merge-pdf/</loc></url>
+  <url><loc>https://private-pdf.netlify.app/split-pdf/</loc></url>
+  <url><loc>https://private-pdf.netlify.app/compress-pdf/</loc></url>
+  <url><loc>https://private-pdf.netlify.app/rotate-pdf/</loc></url>
+  <url><loc>https://private-pdf.netlify.app/jpg-to-pdf/</loc></url>
+  <url><loc>https://private-pdf.netlify.app/pdf-to-jpg/</loc></url>
+</urlset>

@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>JPG to PDF: Convert Photos to PDF Free, Without Uploading | PrivatePDF</title>
+  <meta name="description" content="Combine JPG and PNG images into one PDF, in any order. Free, and your files never leave your device.">
+  <link rel="canonical" href="https://private-pdf.netlify.app/jpg-to-pdf/">
+  <meta property="og:title" content="JPG to PDF: Convert Photos to PDF Free, Without Uploading">
+  <meta property="og:description" content="Combine JPG and PNG images into one PDF, in any order. Free, and your files never leave your device.">
+  <meta property="og:type" content="website">
+  <meta name="theme-color" content="#2f45c8">
+  <link rel="icon" href="/assets/icon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@600;800&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+  <link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body data-tool="jpg-to-pdf">
+<header class="top">
+  <div class="top-row">
+    <a class="brand" href="/"><svg class="brand-ico" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>PrivatePDF</a>
+    <span class="plan" id="plan-chip" hidden>PRO</span>
+    <button class="btn pro" id="upgrade-btn" type="button">Go Pro</button>
+  </div>
+  <nav class="tools-nav" aria-label="Tools"><a href="/merge-pdf/">Merge PDF</a><a href="/split-pdf/">Split PDF</a><a href="/compress-pdf/">Compress PDF</a><a href="/rotate-pdf/">Rotate PDF</a><a href="/jpg-to-pdf/" aria-current="page">JPG to PDF</a><a href="/pdf-to-jpg/">PDF to JPG</a></nav>
+</header>
+<main class="page">
+  <section class="intro">
+    <h1>Turn photos into a PDF</h1>
+    <p class="lede">Combine JPG and PNG images into one PDF, in any order.</p>
+    <p class="badge"><svg class="badge-ico" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg> Files stay on your device</p>
+  </section>
+
+  <section class="tool" aria-label="JPG to PDF">
+    <label class="drop" id="drop" for="file-input">
+      <input id="file-input" type="file" accept="image/*" multiple>
+      <svg class="drop-ico" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><circle cx="9" cy="9" r="1.6"/><path d="m20 15-4.5-4.5L6 20"/></svg>
+      <span class="btn primary">Choose images</span>
+      <span class="hint">or drop them here</span>
+    </label>
+    <ul class="files" id="file-list" hidden></ul>
+    <div class="options" id="options" hidden>
+      <fieldset class="opt">
+        <legend>Page size</legend>
+        <label class="choice"><input type="radio" name="size" value="fit" checked> <span>Same as the image</span></label>
+        <label class="choice"><input type="radio" name="size" value="a4"> <span>A4 <small>Most countries</small></span></label>
+        <label class="choice"><input type="radio" name="size" value="letter"> <span>US Letter</span></label>
+      </fieldset></div>
+    <div class="actions" id="actions" hidden>
+      <button class="btn primary" id="run" type="button"></button>
+      <button class="btn" id="clear" type="button">Start over</button>
+    </div>
+    <p class="limit" id="limit-note"></p>
+    <div class="progress" id="progress" hidden><div class="bar"><span id="progress-fill"></span></div><p id="progress-text">Working…</p></div>
+    <p class="error" id="error" role="alert" hidden></p>
+    <div class="results" id="results" hidden></div>
+  </section>
+
+  <section class="how">
+    <h2>How it works</h2>
+    <ol><li>Choose your photos or scans.</li><li>Put them in order and pick a page size.</li><li>Tap Create PDF and download.</li></ol>
+  </section>
+  <section class="faq"><h2>Questions</h2><details><summary>Which image types work?</summary><p>JPG and PNG work best. WebP and GIF are converted automatically. For iPhone HEIC photos, pick them from your Photos app, which usually hands over a JPG.</p></details><details><summary>Are my files uploaded anywhere?</summary><p>No. PrivatePDF works entirely inside your browser. Your files never leave your device, and it keeps working even if you go offline after the page loads.</p></details><details><summary>Is it free?</summary><p>Yes. You get 3 free tasks a day with files up to 25 MB. Pro removes the limits for a one-time $4.99, with no subscription.</p></details></section>
+</main>
+<footer class="foot">
+  <div class="foot-tools"><a href="/merge-pdf/">Merge PDF</a><a href="/split-pdf/">Split PDF</a><a href="/compress-pdf/">Compress PDF</a><a href="/rotate-pdf/">Rotate PDF</a><a href="/jpg-to-pdf/">JPG to PDF</a><a href="/pdf-to-jpg/">PDF to JPG</a></div>
+  <p>PrivatePDF runs in your browser. Your files are never uploaded.</p>
+  <p>Questions? <span class="email" id="support-email"></span></p>
+</footer>
+<dialog id="pro-dialog" aria-labelledby="pro-title">
+  <h2 id="pro-title">PrivatePDF Pro</h2>
+  <p class="muted">One payment. Yours forever. No subscription.</p>
+  <ul class="perks">
+    <li>Unlimited tasks every day <small>Free: 3 a day</small></li>
+    <li>Files of any size <small>Free: up to 25 MB</small></li>
+    <li>Every tool, on every device you use it on</li>
+  </ul>
+  <a id="buy-link" class="btn primary block" target="_blank" rel="noopener">Unlock Pro</a>
+  <p class="hint" id="buy-note" hidden></p>
+  <button type="button" class="link" id="close-pro">Not now</button>
+</dialog>
+<script type="module" src="/assets/app.js"></script>
+</body>
+</html>
