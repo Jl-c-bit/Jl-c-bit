@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Compress PDF Free: Make PDFs Smaller Without Uploading | PrivatePDF</title>
+  <meta name="description" content="Shrink a PDF so it's easier to email and upload. Free, and your files never leave your device.">
+  <link rel="canonical" href="https://private-pdf.netlify.app/compress-pdf/">
+  <meta property="og:title" content="Compress PDF Free: Make PDFs Smaller Without Uploading">
+  <meta property="og:description" content="Shrink a PDF so it's easier to email and upload. Free, and your files never leave your device.">
+  <meta property="og:type" content="website">
+  <meta name="theme-color" content="#2f45c8">
+  <link rel="icon" href="/assets/icon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@600;800&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+  <link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body data-tool="compress-pdf">
+<header class="top">
+  <div class="top-row">
+    <a class="brand" href="/"><svg class="brand-ico" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>PrivatePDF</a>
+    <span class="plan" id="plan-chip" hidden>PRO</span>
+    <button class="btn pro" id="upgrade-btn" type="button">Go Pro</button>
+  </div>
+  <nav class="tools-nav" aria-label="Tools"><a href="/merge-pdf/">Merge PDF</a><a href="/split-pdf/">Split PDF</a><a href="/compress-pdf/" aria-current="page">Compress PDF</a><a href="/rotate-pdf/">Rotate PDF</a><a href="/jpg-to-pdf/">JPG to PDF</a><a href="/pdf-to-jpg/">PDF to JPG</a></nav>
+</header>
+<main class="page">
+  <section class="intro">
+    <h1>Compress a PDF</h1>
+    <p class="lede">Shrink a PDF so it's easier to email and upload.</p>
+    <p class="badge"><svg class="badge-ico" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg> Files stay on your device</p>
+  </section>
+
+  <section class="tool" aria-label="Compress PDF">
+    <label class="drop" id="drop" for="file-input">
+      <input id="file-input" type="file" accept=".pdf,application/pdf">
+      <svg class="drop-ico" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h16M4 15h16M12 3v4l-2-2m2 2 2-2M12 21v-4l-2 2m2-2 2 2"/></svg>
+      <span class="btn primary">Choose a PDF</span>
+      <span class="hint">or drop it here</span>
+    </label>
+    <ul class="files" id="file-list" hidden></ul>
+    <div class="options" id="options" hidden>
+      <fieldset class="opt">
+        <legend>How small?</legend>
+        <label class="choice"><input type="radio" name="level" value="strong"> <span>Smallest file <small>Lower image quality</small></span></label>
+        <label class="choice"><input type="radio" name="level" value="balanced" checked> <span>Balanced <small>Good for email</small></span></label>
+        <label class="choice"><input type="radio" name="level" value="light"> <span>Best quality <small>Smaller savings</small></span></label>
+      </fieldset>
+      <p class="hint">Compressing turns each page into an image, so text in the new file can't be selected or searched. Best for scans and photo-heavy PDFs.</p></div>
+    <div class="actions" id="actions" hidden>
+      <button class="btn primary" id="run" type="button"></button>
+      <button class="btn" id="clear" type="button">Start over</button>
+    </div>
+    <p class="limit" id="limit-note"></p>
+    <div class="progress" id="progress" hidden><div class="bar"><span id="progress-fill"></span></div><p id="progress-text">Working…</p></div>
+    <p class="error" id="error" role="alert" hidden></p>
+    <div class="results" id="results" hidden></div>
+  </section>
+
+  <section class="how">
+    <h2>How it works</h2>
+    <ol><li>Choose a PDF.</li><li>Pick how small you want it.</li><li>Tap Compress and download the smaller file.</li></ol>
+  </section>
+  <section class="faq"><h2>Questions</h2><details><summary>Why is my compressed file not smaller?</summary><p>PDFs that are mostly plain text are already small. Compression helps most with scans and PDFs full of photos. If the result is bigger, keep your original.</p></details><details><summary>Are my files uploaded anywhere?</summary><p>No. PrivatePDF works entirely inside your browser. Your files never leave your device, and it keeps working even if you go offline after the page loads.</p></details><details><summary>Is it free?</summary><p>Yes. You get 3 free tasks a day with files up to 25 MB. Pro removes the limits for a one-time $4.99, with no subscription.</p></details></section>
+</main>
+<footer class="foot">
+  <div class="foot-tools"><a href="/merge-pdf/">Merge PDF</a><a href="/split-pdf/">Split PDF</a><a href="/compress-pdf/">Compress PDF</a><a href="/rotate-pdf/">Rotate PDF</a><a href="/jpg-to-pdf/">JPG to PDF</a><a href="/pdf-to-jpg/">PDF to JPG</a></div>
+  <p>PrivatePDF runs in your browser. Your files are never uploaded.</p>
+  <p>Questions? <span class="email" id="support-email"></span></p>
+</footer>
+<dialog id="pro-dialog" aria-labelledby="pro-title">
+  <h2 id="pro-title">PrivatePDF Pro</h2>
+  <p class="muted">One payment. Yours forever. No subscription.</p>
+  <ul class="perks">
+    <li>Unlimited tasks every day <small>Free: 3 a day</small></li>
+    <li>Files of any size <small>Free: up to 25 MB</small></li>
+    <li>Every tool, on every device you use it on</li>
+  </ul>
+  <a id="buy-link" class="btn primary block" target="_blank" rel="noopener">Unlock Pro</a>
+  <p class="hint" id="buy-note" hidden></p>
+  <button type="button" class="link" id="close-pro">Not now</button>
+</dialog>
+<script type="module" src="/assets/app.js"></script>
+</body>
+</html>

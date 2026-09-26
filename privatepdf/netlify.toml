@@ -1,0 +1,8 @@
+# Used when this site's Netlify base directory is set to "privatepdf".
+[build]
+  publish = "."
+
+[[headers]]
+  for = "/assets/vendor/*"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"

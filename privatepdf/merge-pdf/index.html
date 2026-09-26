@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Merge PDF Files Free, Without Uploading | PrivatePDF</title>
+  <meta name="description" content="Combine PDFs into one file, in the order you choose. Free, and your files never leave your device.">
+  <link rel="canonical" href="https://private-pdf.netlify.app/merge-pdf/">
+  <meta property="og:title" content="Merge PDF Files Free, Without Uploading">
+  <meta property="og:description" content="Combine PDFs into one file, in the order you choose. Free, and your files never leave your device.">
+  <meta property="og:type" content="website">
+  <meta name="theme-color" content="#2f45c8">
+  <link rel="icon" href="/assets/icon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@600;800&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+  <link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body data-tool="merge-pdf">
+<header class="top">
+  <div class="top-row">
+    <a class="brand" href="/"><svg class="brand-ico" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>PrivatePDF</a>
+    <span class="plan" id="plan-chip" hidden>PRO</span>
+    <button class="btn pro" id="upgrade-btn" type="button">Go Pro</button>
+  </div>
+  <nav class="tools-nav" aria-label="Tools"><a href="/merge-pdf/" aria-current="page">Merge PDF</a><a href="/split-pdf/">Split PDF</a><a href="/compress-pdf/">Compress PDF</a><a href="/rotate-pdf/">Rotate PDF</a><a href="/jpg-to-pdf/">JPG to PDF</a><a href="/pdf-to-jpg/">PDF to JPG</a></nav>
+</header>
+<main class="page">
+  <section class="intro">
+    <h1>Merge PDF files</h1>
+    <p class="lede">Combine PDFs into one file, in the order you choose.</p>
+    <p class="badge"><svg class="badge-ico" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg> Files stay on your device</p>
+  </section>
+
+  <section class="tool" aria-label="Merge PDF">
+    <label class="drop" id="drop" for="file-input">
+      <input id="file-input" type="file" accept=".pdf,application/pdf" multiple>
+      <svg class="drop-ico" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v6a5 5 0 0 0 5 5h0a5 5 0 0 1 5 5v0M17 4v6a5 5 0 0 1-5 5"/><path d="M12 15v5"/></svg>
+      <span class="btn primary">Choose PDF files</span>
+      <span class="hint">or drop them here</span>
+    </label>
+    <ul class="files" id="file-list" hidden></ul>
+    <div class="options" id="options" hidden></div>
+    <div class="actions" id="actions" hidden>
+      <button class="btn primary" id="run" type="button"></button>
+      <button class="btn" id="clear" type="button">Start over</button>
+    </div>
+    <p class="limit" id="limit-note"></p>
+    <div class="progress" id="progress" hidden><div class="bar"><span id="progress-fill"></span></div><p id="progress-text">Working…</p></div>
+    <p class="error" id="error" role="alert" hidden></p>
+    <div class="results" id="results" hidden></div>
+  </section>
+
+  <section class="how">
+    <h2>How it works</h2>
+    <ol><li>Choose two or more PDFs.</li><li>Drag them into order with the arrows.</li><li>Tap Merge and download your new PDF.</li></ol>
+  </section>
+  <section class="faq"><h2>Questions</h2><details><summary>Is there a limit on how many PDFs I can merge?</summary><p>No limit on the number of files. On the free plan, all files together can be up to 25 MB.</p></details><details><summary>Are my files uploaded anywhere?</summary><p>No. PrivatePDF works entirely inside your browser. Your files never leave your device, and it keeps working even if you go offline after the page loads.</p></details><details><summary>Is it free?</summary><p>Yes. You get 3 free tasks a day with files up to 25 MB. Pro removes the limits for a one-time $4.99, with no subscription.</p></details></section>
+</main>
+<footer class="foot">
+  <div class="foot-tools"><a href="/merge-pdf/">Merge PDF</a><a href="/split-pdf/">Split PDF</a><a href="/compress-pdf/">Compress PDF</a><a href="/rotate-pdf/">Rotate PDF</a><a href="/jpg-to-pdf/">JPG to PDF</a><a href="/pdf-to-jpg/">PDF to JPG</a></div>
+  <p>PrivatePDF runs in your browser. Your files are never uploaded.</p>
+  <p>Questions? <span class="email" id="support-email"></span></p>
+</footer>
+<dialog id="pro-dialog" aria-labelledby="pro-title">
+  <h2 id="pro-title">PrivatePDF Pro</h2>
+  <p class="muted">One payment. Yours forever. No subscription.</p>
+  <ul class="perks">
+    <li>Unlimited tasks every day <small>Free: 3 a day</small></li>
+    <li>Files of any size <small>Free: up to 25 MB</small></li>
+    <li>Every tool, on every device you use it on</li>
+  </ul>
+  <a id="buy-link" class="btn primary block" target="_blank" rel="noopener">Unlock Pro</a>
+  <p class="hint" id="buy-note" hidden></p>
+  <button type="button" class="link" id="close-pro">Not now</button>
+</dialog>
+<script type="module" src="/assets/app.js"></script>
+</body>
+</html>
