@@ -4,6 +4,13 @@
 // Every value from users or Stripe goes through esc() to prevent HTML injection.
 // -----------------------------------------------------------------------------
 
+// Path prefix the app is served under ("" locally, "/connect" on Netlify).
+// Pages use a <base> tag plus relative links, so every link and form follows it.
+let basePath = "";
+export function setBasePath(bp) {
+  basePath = bp || "";
+}
+
 export const esc = (v) =>
   String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
@@ -43,11 +50,11 @@ ul.clean{margin:0;padding-left:18px;color:var(--ink-2)}
 export function layout({ title, user, body }) {
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${esc(title)} | Connect Demo</title><style>${CSS}</style></head>
+<base href="${esc(basePath)}/"><title>${esc(title)} | Connect Demo</title><style>${CSS}</style></head>
 <body>
 <header class="top"><div class="top-in">
-  <a class="brand" href="/">Connect Demo</a>
-  ${user ? `<span class="who">${esc(user.name)}</span><form method="post" action="/logout"><button class="btn link" type="submit">Sign out</button></form>` : ""}
+  <a class="brand" href="">Connect Demo</a>
+  ${user ? `<span class="who">${esc(user.name)}</span><form method="post" action="logout"><button class="btn link" type="submit">Sign out</button></form>` : ""}
 </div></header>
 <main>${body}</main>
 </body></html>`;
@@ -64,7 +71,7 @@ export function signupPage({ users, error }) {
       <h1>Sell with Stripe Connect</h1>
       <p class="muted">Create a seller account. We create a Stripe connected account for you, then you finish onboarding with Stripe.</p>
       ${notice(error, "error")}
-      <form class="stack" method="post" action="/signup">
+      <form class="stack" method="post" action="signup">
         <label>Business or display name <input name="name" required maxlength="80" placeholder="Jane's Candles"></label>
         <label>Contact email <input name="email" type="email" required placeholder="jane@example.com"></label>
         <button class="btn primary" type="submit">Create seller account</button>
@@ -75,7 +82,7 @@ export function signupPage({ users, error }) {
       <h2>Demo: sign in as an existing seller</h2>
       <p class="muted small">This demo has no passwords. Add real authentication before going live.</p>
       <div class="row">${users.map((u) => `
-        <form method="post" action="/login/${esc(u.id)}"><button class="btn" type="submit">${esc(u.name)}</button></form>`).join("")}
+        <form method="post" action="login/${esc(u.id)}"><button class="btn" type="submit">${esc(u.name)}</button></form>`).join("")}
       </div>
     </section>` : ""}`,
   });
@@ -109,7 +116,7 @@ export function dashboardPage({ user, status, statusError, flash, error, priceCo
       <p class="muted small">Connected account <code>${esc(acct)}</code></p>
       ${statusHtml}
       ${!statusError && (!status.onboardingComplete || !status.readyToProcessPayments) ? `
-      <form method="post" action="/onboard"><button class="btn primary" type="submit">Onboard to collect payments</button></form>
+      <form method="post" action="onboard"><button class="btn primary" type="submit">Onboard to collect payments</button></form>
       <p class="muted small">You'll finish setup on a secure Stripe page, then come back here.</p>` : ""}
       ${!statusError && status.onboardingComplete && status.readyToProcessPayments ? `<p class="small">You're ready to sell. Status is read live from Stripe every time you open this page.</p>` : ""}
     </section>
@@ -117,7 +124,7 @@ export function dashboardPage({ user, status, statusError, flash, error, priceCo
     <section class="card">
       <h2>Add a product</h2>
       <p class="muted small">Products are created on your connected account, so sales go straight to you.</p>
-      <form class="stack" method="post" action="/products">
+      <form class="stack" method="post" action="products">
         <label>Name <input name="name" required maxlength="120" placeholder="Lavender candle"></label>
         <label>Description <textarea name="description" rows="2" maxlength="500" placeholder="Optional"></textarea></label>
         <div class="row">
@@ -126,7 +133,7 @@ export function dashboardPage({ user, status, statusError, flash, error, priceCo
         </div>
         <button class="btn primary" type="submit">Create product</button>
       </form>
-      <p class="small">Your storefront: <a href="/store/${esc(acct)}">/store/${esc(acct)}</a></p>
+      <p class="small">Your storefront: <a href="store/${esc(acct)}">/store/${esc(acct)}</a></p>
     </section>
 
     <section class="card">
@@ -135,8 +142,8 @@ export function dashboardPage({ user, status, statusError, flash, error, priceCo
       ${sub ? `<div class="status"><div><span>Status</span><span class="pill ${subActive ? "good" : "bad"}">${esc(sub.status)}${sub.cancelAtPeriodEnd ? " (cancels at period end)" : ""}</span></div></div>` : ""}
       ${!priceConfigured ? notice("Subscriptions aren't set up yet: set PRICE_ID in .env to a recurring price on your platform.", "error") : ""}
       <div class="row">
-        ${!subActive ? `<form method="post" action="/subscribe"><button class="btn primary" type="submit"${priceConfigured ? "" : " disabled"}>Subscribe</button></form>` : ""}
-        <form method="post" action="/billing-portal"><button class="btn" type="submit">Manage billing</button></form>
+        ${!subActive ? `<form method="post" action="subscribe"><button class="btn primary" type="submit"${priceConfigured ? "" : " disabled"}>Subscribe</button></form>` : ""}
+        <form method="post" action="billing-portal"><button class="btn" type="submit">Manage billing</button></form>
       </div>
     </section>`,
   });
@@ -152,7 +159,7 @@ export function storefrontPage({ seller, products, error, canceled }) {
         <h2>${esc(p.name)}</h2>
         ${p.description ? `<p class="muted small">${esc(p.description)}</p>` : ""}
         ${amount ? `<p class="price">${esc(amount)}</p>
-        <form method="post" action="/store/${esc(seller.stripeAccountId)}/checkout">
+        <form method="post" action="store/${esc(seller.stripeAccountId)}/checkout">
           <input type="hidden" name="productId" value="${esc(p.id)}">
           <button class="btn primary" type="submit">Buy</button>
         </form>` : `<p class="muted small">Not for sale yet.</p>`}

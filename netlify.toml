@@ -1,8 +1,27 @@
-# One Netlify site serves both apps: Streakly at the root and PrivatePDF
-# under /pdf/. The build copies each app into dist/ (no install step).
+# One Netlify site serves every app:
+#   /           Streakly (static)
+#   /pdf/       PrivatePDF (static)
+#   /connect/   Stripe Connect demo (Express app running as a Netlify Function)
 [build]
-  command = "rm -rf dist && mkdir -p dist/pdf && cp -R streakly/. dist/ && cp -R privatepdf/. dist/pdf/ && rm -rf dist/pdf/test dist/pdf/tools dist/pdf/package.json dist/pdf/netlify.toml dist/pdf/README.md"
+  command = "(cd connect-demo && npm ci --omit=dev --no-audit --no-fund) && rm -rf dist && mkdir -p dist/pdf && cp -R streakly/. dist/ && cp -R privatepdf/. dist/pdf/ && rm -rf dist/pdf/test dist/pdf/tools dist/pdf/package.json dist/pdf/netlify.toml dist/pdf/README.md"
   publish = "dist"
+
+[functions]
+  directory = "connect-demo/netlify/functions"
+  node_bundler = "esbuild"
+
+# Send every /connect request to the Express app.
+[[redirects]]
+  from = "/connect"
+  to = "/.netlify/functions/connect"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/connect/*"
+  to = "/.netlify/functions/connect/:splat"
+  status = 200
+  force = true
 
 [[headers]]
   for = "/pdf/assets/vendor/*"

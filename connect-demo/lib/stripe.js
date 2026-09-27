@@ -71,10 +71,15 @@ export function createStripeClient(env = process.env) {
  */
 export function loadSettings(env = process.env) {
   const port = Number(env.PORT || 4242);
+  // URL path the app lives under: "" locally, "/connect" on the Netlify site.
+  const basePath = (env.BASE_PATH || "").replace(/\/+$/, "");
+  // Netlify sets URL to the site's main address (e.g. https://my-site.netlify.app).
+  const origin = (env.URL || `http://localhost:${port}`).replace(/\/+$/, "");
   return {
     port,
+    basePath,
     // Public URL of this app. Stripe redirects back here after onboarding and checkout.
-    baseUrl: (env.BASE_URL || `http://localhost:${port}`).replace(/\/+$/, ""),
+    baseUrl: (env.BASE_URL || origin + basePath).replace(/\/+$/, ""),
     // Sample platform fee taken on each storefront sale, in the smallest currency
     // unit (cents). $1.23 here. Adjust to your pricing.
     applicationFeeCents: Number(env.APPLICATION_FEE_CENTS || 123),

@@ -1,5 +1,5 @@
 // Offline support: serve the app shell from cache, refresh it in the background.
-const CACHE = "streakly-v6";
+const CACHE = "streakly-v7";
 const ASSETS = ["./", "index.html", "styles.css", "app.js", "core.js", "config.js", "manifest.webmanifest", "icon.svg"];
 
 self.addEventListener("install", (e) => {
@@ -16,8 +16,8 @@ self.addEventListener("activate", (e) => {
 
 self.addEventListener("fetch", (e) => {
   const url = new URL(e.request.url);
-  // PrivatePDF shares this site under /pdf/ and must always load fresh.
-  if (e.request.method !== "GET" || url.origin !== location.origin || url.pathname.startsWith("/pdf/")) return;
+  // Other apps share this site (/pdf/, /connect/) and must always load fresh.
+  if (e.request.method !== "GET" || url.origin !== location.origin || /^\/(pdf|connect)(\/|$)/.test(url.pathname)) return;
   e.respondWith(
     caches.match(e.request, { ignoreSearch: true }).then((cached) => {
       const network = fetch(e.request)
