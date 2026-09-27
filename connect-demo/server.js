@@ -21,7 +21,7 @@ import {
   createStorefrontCheckout, createSubscriptionCheckout, createBillingPortal, UserFacingError,
 } from "./lib/connect.js";
 import { parseConnectNotification, handleConnectNotification, constructBillingEvent, handleBillingEvent } from "./lib/webhooks.js";
-import { signupPage, dashboardPage, storefrontPage, messagePage } from "./lib/views.js";
+import { signupPage, dashboardPage, storefrontPage, messagePage, setBasePath } from "./lib/views.js";
 
 const ACCOUNT_ID = /^acct_[A-Za-z0-9]+$/;
 
@@ -46,11 +46,16 @@ export function toCents(input) {
  */
 export function createApp({ stripeClient, db, settings, env = process.env, log = console.log }) {
   const app = express();
+  // All routes live on a router so the app can run under a path prefix
+  // ("/connect" on the Netlify site, "" locally).
+  const router = express.Router();
+  const bp = settings.basePath || "";
+  setBasePath(bp);
 
   // --- Webhooks FIRST, with the raw body (signature checks need exact bytes) ---
 
   // Thin events for connected accounts (Accounts v2).
-  app.post("/webhooks/connect", express.raw({ type: "application/json" }), async (req, res) => {
+  router.post("/webhooks/connect", express.raw({ type: "application/json" }), async (req, res) => {
     let notification;
     try {
       notification = parseConnectNotification(stripeClient, req.body, req.get("stripe-signature"), env);
@@ -70,7 +75,7 @@ export function createApp({ stripeClient, db, settings, env = process.env, log =
   });
 
   // Snapshot events for your platform's subscriptions/billing.
-  app.post("/webhooks/billing", express.raw({ type: "application/json" }), (req, res) => {
+  router.post("/webhooks/billing", express.raw({ type: "application/json" }), async (req, res) => {
     let event;
     try {
       event = constructBillingEvent(stripeClient, req.body, req.get("stripe-signature"), env);
@@ -80,7 +85,7 @@ export function createApp({ stripeClient, db, settings, env = process.env, log =
       return res.status(400).send("Invalid signature");
     }
     try {
-      handleBillingEvent(db, event, log);
+      await handleBillingEvent(db, event, log);
       res.sendStatus(200);
     } catch (err) {
       log(`[billing] Handler failed for ${event.id}: ${err.message}`);
@@ -89,62 +94,61 @@ export function createApp({ stripeClient, db, settings, env = process.env, log =
   });
 
   // Regular form posts.
-  app.use(express.urlencoded({ extended: false }));
+  router.use(express.urlencoded({ extended: false }));
 
   // --- Demo "authentication" ------------------------------------------------
   // A plain cookie holding the user ID. Fine for a local demo only.
   // TODO: replace with your app's real sign-in (sessions, OAuth, ...).
-  const currentUser = (req) => {
+  const currentUser = async (req) => {
     const match = /(?:^|;\s*)uid=([^;]+)/.exec(req.get("cookie") || "");
-    return match ? db.getUser(decodeURIComponent(match[1])) : null;
+    return match ? await db.getUser(decodeURIComponent(match[1])) : null;
   };
-  const signIn = (res, user) => res.cookie("uid", user.id, { httpOnly: true, sameSite: "lax" });
-  const requireUser = (req, res, next) => {
-    const user = currentUser(req);
-    if (!user?.stripeAccountId) return res.redirect(303, "/");
+  const signIn = (res, user) => res.cookie("uid", user.id, { httpOnly: true, sameSite: "lax", path: bp || "/" });
+  const requireUser = async (req, res, next) => {
+    const user = await currentUser(req);
+    if (!user?.stripeAccountId) return res.redirect(303, bp + "/");
     req.user = user;
     next();
   };
 
   // --- 1. Sign up: create the connected account -------------------------------
-  app.get("/", (req, res) => {
-    if (currentUser(req)?.stripeAccountId) return res.redirect(303, "/dashboard");
-    res.send(signupPage({ users: db.listUsers().filter((u) => u.stripeAccountId), error: req.query.error }));
+  router.get("/", async (req, res) => {
+    if ((await currentUser(req))?.stripeAccountId) return res.redirect(303, bp + "/dashboard");
+    res.send(signupPage({ users: await db.listUsers(), error: req.query.error }));
   });
 
-  app.post("/signup", async (req, res) => {
+  router.post("/signup", async (req, res) => {
     const name = String(req.body.name || "").trim().slice(0, 80);
     const email = String(req.body.email || "").trim().slice(0, 200);
     if (!name || !/^\S+@\S+\.\S+$/.test(email)) {
-      return res.status(400).send(signupPage({ users: db.listUsers(), error: "Enter a name and a valid email." }));
+      return res.status(400).send(signupPage({ users: await db.listUsers(), error: "Enter a name and a valid email." }));
     }
     try {
       const account = await createConnectedAccount(stripeClient, { displayName: name, contactEmail: email });
       // Save the user and the user -> connected account mapping.
-      const user = db.createUser({ name, email });
-      db.linkStripeAccount(user.id, account.id);
+      const user = await db.createUser({ name, email, stripeAccountId: account.id });
       signIn(res, user);
-      res.redirect(303, "/dashboard");
+      res.redirect(303, bp + "/dashboard");
     } catch (err) {
       log(`[signup] ${err.message}`);
-      res.status(502).send(signupPage({ users: db.listUsers(), error: `Couldn't create your Stripe account: ${describe(err)}` }));
+      res.status(502).send(signupPage({ users: await db.listUsers(), error: `Couldn't create your Stripe account: ${describe(err)}` }));
     }
   });
 
-  app.post("/login/:userId", (req, res) => {
-    const user = db.getUser(req.params.userId);
-    if (!user) return res.redirect(303, "/");
+  router.post("/login/:userId", async (req, res) => {
+    const user = await db.getUser(req.params.userId);
+    if (!user) return res.redirect(303, bp + "/");
     signIn(res, user);
-    res.redirect(303, "/dashboard");
+    res.redirect(303, bp + "/dashboard");
   });
 
-  app.post("/logout", (req, res) => {
-    res.clearCookie("uid");
-    res.redirect(303, "/");
+  router.post("/logout", (req, res) => {
+    res.clearCookie("uid", { path: bp || "/" });
+    res.redirect(303, bp + "/");
   });
 
   // --- 2. Dashboard + onboarding ------------------------------------------------
-  app.get("/dashboard", requireUser, async (req, res) => {
+  router.get("/dashboard", requireUser, async (req, res) => {
     let status = null;
     let statusError = null;
     try {
@@ -168,57 +172,57 @@ export function createApp({ stripeClient, db, settings, env = process.env, log =
   });
 
   // "Onboard to collect payments" button.
-  app.post("/onboard", requireUser, async (req, res) => {
+  router.post("/onboard", requireUser, async (req, res) => {
     try {
       const url = await createOnboardingLink(stripeClient, { accountId: req.user.stripeAccountId, baseUrl: settings.baseUrl });
       res.redirect(303, url); // off to Stripe-hosted onboarding
     } catch (err) {
       log(`[onboard] ${err.message}`);
-      res.redirect(303, `/dashboard?error=${encodeURIComponent(describe(err))}`);
+      res.redirect(303, `${bp}/dashboard?error=${encodeURIComponent(describe(err))}`);
     }
   });
 
   // Stripe sends the user here when their link expired or was reused: make a fresh one.
-  app.get("/onboard/refresh", requireUser, async (req, res) => {
+  router.get("/onboard/refresh", requireUser, async (req, res) => {
     try {
       res.redirect(303, await createOnboardingLink(stripeClient, { accountId: req.user.stripeAccountId, baseUrl: settings.baseUrl }));
     } catch (err) {
-      res.redirect(303, `/dashboard?error=${encodeURIComponent(describe(err))}`);
+      res.redirect(303, `${bp}/dashboard?error=${encodeURIComponent(describe(err))}`);
     }
   });
 
   // --- 3. Create products on the connected account --------------------------------
-  app.post("/products", requireUser, async (req, res) => {
+  router.post("/products", requireUser, async (req, res) => {
     const name = String(req.body.name || "").trim().slice(0, 120);
     const description = String(req.body.description || "").trim().slice(0, 500);
     const currency = ["usd", "eur", "gbp", "aud"].includes(req.body.currency) ? req.body.currency : "usd";
     const priceInCents = toCents(req.body.price);
     if (!name || !priceInCents) {
-      return res.redirect(303, `/dashboard?error=${encodeURIComponent("Enter a product name and a price like 12.00.")}`);
+      return res.redirect(303, `${bp}/dashboard?error=${encodeURIComponent("Enter a product name and a price like 12.00.")}`);
     }
     try {
       const product = await createProduct(stripeClient, { accountId: req.user.stripeAccountId, name, description, priceInCents, currency });
-      res.redirect(303, `/dashboard?flash=${encodeURIComponent(`Created "${product.name}".`)}`);
+      res.redirect(303, `${bp}/dashboard?flash=${encodeURIComponent(`Created "${product.name}".`)}`);
     } catch (err) {
       log(`[products] ${err.message}`);
-      res.redirect(303, `/dashboard?error=${encodeURIComponent(`Couldn't create the product: ${describe(err)}`)}`);
+      res.redirect(303, `${bp}/dashboard?error=${encodeURIComponent(`Couldn't create the product: ${describe(err)}`)}`);
     }
   });
 
   // --- 4. Storefront: one page per connected account ------------------------------
   // NOTE: the URL uses the Stripe account ID for simplicity. In a real app, use
   // your own identifier (a shop slug like /store/janes-candles) instead of acct_.
-  const findSeller = (req, res) => {
+  const findSeller = async (req, res) => {
     const accountId = req.params.accountId;
-    const seller = ACCOUNT_ID.test(accountId) ? db.findUserByAccountId(accountId) : null;
+    const seller = ACCOUNT_ID.test(accountId) ? await db.findUserByAccountId(accountId) : null;
     if (!seller) {
-      res.status(404).send(messagePage({ title: "Not found", heading: "Store not found", message: "This store doesn't exist.", link: { href: "/", label: "Home" } }));
+      res.status(404).send(messagePage({ title: "Not found", heading: "Store not found", message: "This store doesn't exist.", link: { href: "", label: "Home" } }));
     }
     return seller;
   };
 
-  app.get("/store/:accountId", async (req, res) => {
-    const seller = findSeller(req, res);
+  router.get("/store/:accountId", async (req, res) => {
+    const seller = await findSeller(req, res);
     if (!seller) return;
     try {
       const products = await listProducts(stripeClient, seller.stripeAccountId);
@@ -229,11 +233,11 @@ export function createApp({ stripeClient, db, settings, env = process.env, log =
     }
   });
 
-  app.post("/store/:accountId/checkout", async (req, res) => {
-    const seller = findSeller(req, res);
+  router.post("/store/:accountId/checkout", async (req, res) => {
+    const seller = await findSeller(req, res);
     if (!seller) return;
     const productId = String(req.body.productId || "");
-    if (!/^prod_[A-Za-z0-9]+$/.test(productId)) return res.redirect(303, `/store/${seller.stripeAccountId}`);
+    if (!/^prod_[A-Za-z0-9]+$/.test(productId)) return res.redirect(303, `${bp}/store/${seller.stripeAccountId}`);
     try {
       const url = await createStorefrontCheckout(stripeClient, {
         accountId: seller.stripeAccountId, productId, baseUrl: settings.baseUrl, applicationFeeCents: settings.applicationFeeCents,
@@ -241,12 +245,12 @@ export function createApp({ stripeClient, db, settings, env = process.env, log =
       res.redirect(303, url); // off to Stripe Checkout
     } catch (err) {
       log(`[checkout] ${err.message}`);
-      res.redirect(303, `/store/${seller.stripeAccountId}?error=${encodeURIComponent(describe(err))}`);
+      res.redirect(303, `${bp}/store/${seller.stripeAccountId}?error=${encodeURIComponent(describe(err))}`);
     }
   });
 
-  app.get("/store/:accountId/success", async (req, res) => {
-    const seller = findSeller(req, res);
+  router.get("/store/:accountId/success", async (req, res) => {
+    const seller = await findSeller(req, res);
     if (!seller) return;
     let message = "Thanks for your order!";
     try {
@@ -256,11 +260,11 @@ export function createApp({ stripeClient, db, settings, env = process.env, log =
     } catch {
       // Still show a friendly page; fulfilment should rely on webhooks, not this redirect.
     }
-    res.send(messagePage({ title: "Thank you", heading: "Thank you!", message, link: { href: `/store/${seller.stripeAccountId}`, label: "Back to the store" } }));
+    res.send(messagePage({ title: "Thank you", heading: "Thank you!", message, link: { href: `store/${seller.stripeAccountId}`, label: "Back to the store" } }));
   });
 
   // --- 5. Platform subscription for the connected account -------------------------
-  app.post("/subscribe", requireUser, async (req, res) => {
+  router.post("/subscribe", requireUser, async (req, res) => {
     try {
       // PLACEHOLDER: PRICE_ID must be a recurring price on your platform (see .env.example).
       const priceId = requireEnv("PRICE_ID", env);
@@ -268,24 +272,29 @@ export function createApp({ stripeClient, db, settings, env = process.env, log =
       res.redirect(303, url);
     } catch (err) {
       log(`[subscribe] ${err.message}`);
-      res.redirect(303, `/dashboard?error=${encodeURIComponent(describe(err))}`);
+      res.redirect(303, `${bp}/dashboard?error=${encodeURIComponent(describe(err))}`);
     }
   });
 
-  app.get("/subscribe/success", requireUser, (req, res) => {
+  router.get("/subscribe/success", requireUser, (req, res) => {
     // The webhook (customer.subscription.created/updated) records the subscription.
-    res.redirect(303, `/dashboard?flash=${encodeURIComponent("Thanks for subscribing! Your status updates in a few seconds.")}`);
+    res.redirect(303, `${bp}/dashboard?flash=${encodeURIComponent("Thanks for subscribing! Your status updates in a few seconds.")}`);
   });
 
   // --- 6. Billing portal ---------------------------------------------------------
-  app.post("/billing-portal", requireUser, async (req, res) => {
+  router.post("/billing-portal", requireUser, async (req, res) => {
     try {
       res.redirect(303, await createBillingPortal(stripeClient, { accountId: req.user.stripeAccountId, baseUrl: settings.baseUrl }));
     } catch (err) {
       log(`[portal] ${err.message}`);
-      res.redirect(303, `/dashboard?error=${encodeURIComponent(`Couldn't open billing: ${describe(err)}`)}`);
+      res.redirect(303, `${bp}/dashboard?error=${encodeURIComponent(`Couldn't open billing: ${describe(err)}`)}`);
     }
   });
+
+  // Mount the routes. On Netlify, requests may arrive either with the public
+  // path (/connect/...) or the function path (/.netlify/functions/connect/...).
+  app.use(bp || "/", router);
+  if (bp) app.use("/.netlify/functions/connect", router);
 
   return app;
 }

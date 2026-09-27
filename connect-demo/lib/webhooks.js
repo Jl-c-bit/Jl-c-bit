@@ -113,7 +113,7 @@ function subscriptionRecord(sub) {
  * IMPORTANT for v2 accounts: the subscriber is identified by `customer_account`
  * (acct_...), not `customer` (cus_...). e.g. `subscription.customer_account`.
  */
-export function handleBillingEvent(db, event, log = console.log) {
+export async function handleBillingEvent(db, event, log = console.log) {
   const obj = event.data.object;
 
   switch (event.type) {
@@ -125,7 +125,7 @@ export function handleBillingEvent(db, event, log = console.log) {
       const accountId = obj.customer_account; // acct_...
       const record = subscriptionRecord(obj);
       // Write to the database: grant or adjust access based on status + priceId + quantity.
-      const user = db.setSubscription(accountId, record);
+      const user = await db.setSubscription(accountId, record);
       if (record.cancelAtPeriodEnd) log(`[billing] ${accountId} will cancel at period end`);
       if (record.pausedUntil) log(`[billing] ${accountId} collection paused until ${record.pausedUntil}`);
       log(`[billing] ${accountId} subscription ${record.status} (price ${record.priceId}, qty ${record.quantity})`);
@@ -136,7 +136,7 @@ export function handleBillingEvent(db, event, log = console.log) {
     case "customer.subscription.deleted": {
       const accountId = obj.customer_account;
       const record = { ...subscriptionRecord(obj), status: "canceled" };
-      const user = db.setSubscription(accountId, record);
+      const user = await db.setSubscription(accountId, record);
       log(`[billing] ${accountId} subscription canceled; revoke access`);
       return { handled: event.type, accountId, stored: Boolean(user), record };
     }

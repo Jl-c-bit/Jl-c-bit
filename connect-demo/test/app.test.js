@@ -3,9 +3,11 @@
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import Stripe from "stripe";
+import serverless from "serverless-http";
 import { createApp, toCents } from "../server.js";
 import { createDb } from "../lib/db.js";
-import { createStripeClient, ConfigError } from "../lib/stripe.js";
+import { createStripeClient, ConfigError, loadSettings } from "../lib/stripe.js";
+import { handler as netlifyHandler } from "../netlify/functions/connect.mjs";
 
 const real = new Stripe("sk_test_fake");
 const calls = [];
@@ -117,7 +119,7 @@ test("signup creates a v2 account with exactly the required properties", async (
     configuration: { customer: {}, merchant: { capabilities: { card_payments: { requested: true } } } },
   });
   assert.equal(params.type, undefined, "no top-level type");
-  assert.equal(db.listUsers()[0].stripeAccountId, "acct_123", "user -> account mapping stored");
+  assert.equal((await db.listUsers())[0].stripeAccountId, "acct_123", "user -> account mapping stored");
 });
 
 test("dashboard reads status live from the API and offers onboarding", async () => {
@@ -252,16 +254,16 @@ const sub = (extra = {}) => ({
 test("billing webhook stores subscription state by customer_account", async () => {
   let res = await signedPost("/webhooks/billing", snapshot("customer.subscription.updated", sub()), env.STRIPE_BILLING_WEBHOOK_SECRET);
   assert.equal(res.status, 200);
-  assert.equal(db.findUserByAccountId("acct_123").subscription.status, "active");
+  assert.equal((await db.findUserByAccountId("acct_123")).subscription.status, "active");
 
   res = await signedPost("/webhooks/billing", snapshot("customer.subscription.updated", sub({ cancel_at_period_end: true, items: { data: [{ price: { id: "price_pro" }, quantity: 3 }] } })), env.STRIPE_BILLING_WEBHOOK_SECRET);
-  const s = db.findUserByAccountId("acct_123").subscription;
+  const s = (await db.findUserByAccountId("acct_123")).subscription;
   assert.equal(s.cancelAtPeriodEnd, true);
   assert.equal(s.priceId, "price_pro");
   assert.equal(s.quantity, 3);
 
   res = await signedPost("/webhooks/billing", snapshot("customer.subscription.deleted", sub({ status: "canceled" })), env.STRIPE_BILLING_WEBHOOK_SECRET);
-  assert.equal(db.findUserByAccountId("acct_123").subscription.status, "canceled");
+  assert.equal((await db.findUserByAccountId("acct_123")).subscription.status, "canceled");
 
   const html = await (await get("/dashboard")).text();
   assert.match(html, /canceled/);
@@ -295,4 +297,92 @@ test("missing webhook secret gives a helpful 500", async () => {
   assert.equal(res.status, 500);
   assert.match(await res.text(), /Missing STRIPE_BILLING_WEBHOOK_SECRET/);
   s.close();
+});
+
+// ---- Running under /connect on Netlify ----------------------------------------
+
+test("settings: Netlify URL + base path", () => {
+  const s = loadSettings({ URL: "https://site.netlify.app", BASE_PATH: "/connect" });
+  assert.equal(s.basePath, "/connect");
+  assert.equal(s.baseUrl, "https://site.netlify.app/connect");
+  assert.equal(loadSettings({}).baseUrl, "http://localhost:4242");
+});
+
+// Build a Lambda-style event like Netlify sends to the function.
+const lambdaEvent = (method, path, { body = "", headers = {} } = {}) => ({
+  httpMethod: method, path, rawUrl: `https://site.netlify.app${path}`, headers: { host: "site.netlify.app", ...headers },
+  multiValueHeaders: {}, queryStringParameters: {}, multiValueQueryStringParameters: {}, body, isBase64Encoded: false,
+});
+
+test("Netlify adapter: pages, prefixed redirects, cookie path and webhooks", async () => {
+  const pdb = createDb(null);
+  const app = createApp({
+    stripeClient: fakeStripe, db: pdb, env, log: () => {},
+    settings: { basePath: "/connect", baseUrl: "https://site.netlify.app/connect", applicationFeeCents: 123 },
+  });
+  const handle = serverless(app);
+
+  // Home page on the public path, with a <base> so relative links stay under /connect/.
+  let res = await handle(lambdaEvent("GET", "/connect/"), {});
+  assert.equal(res.statusCode, 200);
+  assert.match(res.body, /<base href="\/connect\/">/);
+  assert.match(res.body, /action="signup"/);
+
+  // Same app reachable on the function path too.
+  res = await handle(lambdaEvent("GET", "/.netlify/functions/connect/"), {});
+  assert.equal(res.statusCode, 200);
+
+  // Sign up: redirect keeps the prefix, cookie is scoped to /connect.
+  res = await handle(lambdaEvent("POST", "/connect/signup", {
+    body: "name=Shop&email=shop%40example.com", headers: { "content-type": "application/x-www-form-urlencoded" },
+  }), {});
+  assert.equal(res.statusCode, 303);
+  assert.equal(res.headers.location, "/connect/dashboard");
+  const setCookie = [res.headers["set-cookie"], ...(res.multiValueHeaders?.["set-cookie"] ?? [])].filter(Boolean).join(";");
+  assert.match(setCookie, /Path=\/connect/);
+
+  // Onboarding link uses the public /connect URLs.
+  const cookieHeader = setCookie.split(";")[0];
+  res = await handle(lambdaEvent("POST", "/connect/onboard", { headers: { cookie: cookieHeader, "content-type": "application/x-www-form-urlencoded" } }), {});
+  assert.equal(res.statusCode, 303);
+  const link = lastCall("accountLinks.create").args[0].use_case.account_onboarding;
+  assert.equal(link.refresh_url, "https://site.netlify.app/connect/onboard/refresh");
+  assert.equal(link.return_url, "https://site.netlify.app/connect/dashboard?accountId=acct_123");
+
+  // A signed webhook still verifies after passing through the Lambda adapter (raw body intact).
+  const payload = JSON.stringify(snapshot("customer.subscription.updated", sub()));
+  const header = real.webhooks.generateTestHeaderString({ payload, secret: env.STRIPE_BILLING_WEBHOOK_SECRET });
+  res = await handle(lambdaEvent("POST", "/connect/webhooks/billing", { body: payload, headers: { "content-type": "application/json", "stripe-signature": header } }), {});
+  assert.equal(res.statusCode, 200);
+  assert.equal((await pdb.findUserByAccountId("acct_123")).subscription.status, "active");
+
+  // Base64-encoded bodies (how Netlify sometimes delivers them) verify too.
+  res = await handle({ ...lambdaEvent("POST", "/connect/webhooks/billing", { headers: { "content-type": "application/json", "stripe-signature": header } }), body: Buffer.from(payload).toString("base64"), isBase64Encoded: true }, {});
+  assert.equal(res.statusCode, 200);
+});
+
+test("Netlify function shows a setup page when the Stripe key is missing", async () => {
+  const saved = process.env.STRIPE_SECRET_KEY;
+  delete process.env.STRIPE_SECRET_KEY;
+  try {
+    const event = { ...lambdaEvent("GET", "/connect/"), blobs: Buffer.from(JSON.stringify({ url: "https://blobs.example", token: "t" })).toString("base64") };
+    const res = await netlifyHandler(event, {});
+    assert.equal(res.statusCode, 500);
+    assert.match(res.body, /Missing STRIPE_SECRET_KEY/);
+    assert.match(res.body, /Environment variables/);
+  } finally {
+    if (saved !== undefined) process.env.STRIPE_SECRET_KEY = saved;
+  }
+});
+
+test("blob database round-trips through a Netlify Blobs-style store", async () => {
+  const { createBlobDb } = await import("../lib/db.js");
+  const mem = new Map();
+  const store = { get: async (k) => mem.get(k) ?? null, setJSON: async (k, v) => { mem.set(k, JSON.parse(JSON.stringify(v))); } };
+  const bdb = createBlobDb(store);
+  const u = await bdb.createUser({ name: "A", email: "a@x.io", stripeAccountId: "acct_9" });
+  assert.equal((await bdb.getUser(u.id)).stripeAccountId, "acct_9");
+  await bdb.setSubscription("acct_9", { status: "active" });
+  assert.equal((await bdb.findUserByAccountId("acct_9")).subscription.status, "active");
+  assert.equal(await bdb.setSubscription("acct_nope", {}), null);
 });
