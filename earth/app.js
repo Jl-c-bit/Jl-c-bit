@@ -694,6 +694,9 @@
   // Keep the "x min ago" label and night shading current.
   setInterval(function () { updateTimebar(); updateTerminator(); }, 60000);
 
+  // Shared with fresh.js (the fresh-photo ordering panel).
+  window.LiveEarth = { map: map, toast: toast };
+
   document.addEventListener('visibilitychange', function () {
     if (document.visibilityState === 'visible') {
       if ($('ov-iss').checked) startIss();

@@ -2,9 +2,10 @@
 #   /           Streakly (static)
 #   /pdf/       PrivatePDF (static)
 #   /earth/     LiveEarth live satellite map (static)
+#   /earth/api/ LiveEarth fresh-photo API (Netlify Function earth-api.mjs)
 #   /connect/   Stripe Connect demo (Express app running as a Netlify Function)
 [build]
-  command = "(cd connect-demo && npm ci --omit=dev --no-audit --no-fund) && rm -rf dist && mkdir -p dist/pdf dist/earth && cp -R streakly/. dist/ && cp -R privatepdf/. dist/pdf/ && cp -R earth/. dist/earth/ && rm -rf dist/pdf/test dist/pdf/tools dist/pdf/package.json dist/pdf/netlify.toml dist/pdf/README.md"
+  command = "(cd connect-demo && npm ci --omit=dev --no-audit --no-fund) && rm -rf dist && mkdir -p dist/pdf dist/earth && cp -R streakly/. dist/ && cp -R privatepdf/. dist/pdf/ && cp -R earth/. dist/earth/ && rm -rf dist/earth/api dist/earth/test dist/earth/package.json dist/earth/README.md dist/pdf/test dist/pdf/tools dist/pdf/package.json dist/pdf/netlify.toml dist/pdf/README.md"
   publish = "dist"
 
 [functions]
