@@ -28,8 +28,9 @@ Every Stripe call goes through one `stripeClient` (`lib/stripe.js`). The SDK (st
 The app also runs on the same Netlify site as Streakly, at **`/connect/`**
 (for example `https://chimerical-crostata-fb89ec.netlify.app/connect/`):
 
-- `netlify/functions/connect.mjs` runs the whole Express app as a Netlify Function
-  (via `serverless-http`), and `netlify.toml` rewrites `/connect/*` to it.
+- `netlify/functions/connect.mjs` is a modern Netlify Function that routes itself to
+  `/connect` and `/connect/*` (`config.path`). It starts the Express app on a private
+  local port inside the function and forwards each request to it unchanged.
 - Data is stored in **Netlify Blobs** (`createBlobDb`), since function files are temporary.
 - Settings come from the site's environment variables: in Netlify, open **Site configuration →
   Environment variables** and add `STRIPE_SECRET_KEY`, `PRICE_ID`, `STRIPE_CONNECT_WEBHOOK_SECRET`

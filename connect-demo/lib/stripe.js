@@ -83,6 +83,7 @@ export function loadSettings(env = process.env) {
     // Sample platform fee taken on each storefront sale, in the smallest currency
     // unit (cents). $1.23 here. Adjust to your pricing.
     applicationFeeCents: Number(env.APPLICATION_FEE_CENTS || 123),
-    dbFile: env.DB_FILE || new URL("../data/db.json", import.meta.url).pathname,
+    // Local JSON database file (server.js picks a default). Unused on Netlify.
+    dbFile: env.DB_FILE || null,
   };
 }

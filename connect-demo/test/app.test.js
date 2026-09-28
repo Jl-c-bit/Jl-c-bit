@@ -3,11 +3,10 @@
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import Stripe from "stripe";
-import serverless from "serverless-http";
 import { createApp, toCents } from "../server.js";
 import { createDb } from "../lib/db.js";
 import { createStripeClient, ConfigError, loadSettings } from "../lib/stripe.js";
-import { handler as netlifyHandler } from "../netlify/functions/connect.mjs";
+import netlifyHandler, { createHandler, config as fnConfig } from "../netlify/functions/connect.mjs";
 
 const real = new Stripe("sk_test_fake");
 const calls = [];
@@ -308,68 +307,68 @@ test("settings: Netlify URL + base path", () => {
   assert.equal(loadSettings({}).baseUrl, "http://localhost:4242");
 });
 
-// Build a Lambda-style event like Netlify sends to the function.
-const lambdaEvent = (method, path, { body = "", headers = {} } = {}) => ({
-  httpMethod: method, path, rawUrl: `https://site.netlify.app${path}`, headers: { host: "site.netlify.app", ...headers },
-  multiValueHeaders: {}, queryStringParameters: {}, multiValueQueryStringParameters: {}, body, isBase64Encoded: false,
-});
-
-test("Netlify adapter: pages, prefixed redirects, cookie path and webhooks", async () => {
+test("Netlify function: routes /connect, forwards requests intact to Express", async () => {
+  assert.deepEqual(fnConfig.path, ["/connect", "/connect/*"]);
   const pdb = createDb(null);
-  const app = createApp({
+  const handle = createHandler(() => createApp({
     stripeClient: fakeStripe, db: pdb, env, log: () => {},
     settings: { basePath: "/connect", baseUrl: "https://site.netlify.app/connect", applicationFeeCents: 123 },
-  });
-  const handle = serverless(app);
+  }));
+  const site = "https://site.netlify.app";
 
-  // Home page on the public path, with a <base> so relative links stay under /connect/.
-  let res = await handle(lambdaEvent("GET", "/connect/"), {});
-  assert.equal(res.statusCode, 200);
-  assert.match(res.body, /<base href="\/connect\/">/);
-  assert.match(res.body, /action="signup"/);
+  // Home page, with a <base> so relative links stay under /connect/.
+  let res = await handle(new Request(`${site}/connect/`));
+  assert.equal(res.status, 200);
+  const home = await res.text();
+  assert.match(home, /<base href="\/connect\/">/);
+  assert.match(home, /action="signup"/);
 
-  // Same app reachable on the function path too.
-  res = await handle(lambdaEvent("GET", "/.netlify/functions/connect/"), {});
-  assert.equal(res.statusCode, 200);
+  // Sign up: redirect keeps the prefix and isn't followed; cookie is scoped to /connect.
+  res = await handle(new Request(`${site}/connect/signup`, {
+    method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: "name=Shop&email=shop%40example.com",
+  }));
+  assert.equal(res.status, 303);
+  assert.equal(res.headers.get("location"), "/connect/dashboard");
+  const setCookie = res.headers.getSetCookie();
+  assert.equal(setCookie.length, 1);
+  assert.match(setCookie[0], /Path=\/connect/);
 
-  // Sign up: redirect keeps the prefix, cookie is scoped to /connect.
-  res = await handle(lambdaEvent("POST", "/connect/signup", {
-    body: "name=Shop&email=shop%40example.com", headers: { "content-type": "application/x-www-form-urlencoded" },
-  }), {});
-  assert.equal(res.statusCode, 303);
-  assert.equal(res.headers.location, "/connect/dashboard");
-  const setCookie = [res.headers["set-cookie"], ...(res.multiValueHeaders?.["set-cookie"] ?? [])].filter(Boolean).join(";");
-  assert.match(setCookie, /Path=\/connect/);
-
-  // Onboarding link uses the public /connect URLs.
-  const cookieHeader = setCookie.split(";")[0];
-  res = await handle(lambdaEvent("POST", "/connect/onboard", { headers: { cookie: cookieHeader, "content-type": "application/x-www-form-urlencoded" } }), {});
-  assert.equal(res.statusCode, 303);
+  // Signed-in request: dashboard renders; onboarding link uses the public /connect URLs.
+  const cookie = setCookie[0].split(";")[0];
+  res = await handle(new Request(`${site}/connect/dashboard`, { headers: { cookie } }));
+  assert.equal(res.status, 200);
+  assert.match(await res.text(), /Onboard to collect payments|ready to sell/);
+  res = await handle(new Request(`${site}/connect/onboard`, { method: "POST", headers: { cookie } }));
+  assert.equal(res.status, 303);
+  assert.equal(res.headers.get("location"), "https://connect.stripe.com/setup/xyz");
   const link = lastCall("accountLinks.create").args[0].use_case.account_onboarding;
   assert.equal(link.refresh_url, "https://site.netlify.app/connect/onboard/refresh");
-  assert.equal(link.return_url, "https://site.netlify.app/connect/dashboard?accountId=acct_123");
 
-  // A signed webhook still verifies after passing through the Lambda adapter (raw body intact).
+  // A signed webhook still verifies after being forwarded (raw body intact).
   const payload = JSON.stringify(snapshot("customer.subscription.updated", sub()));
   const header = real.webhooks.generateTestHeaderString({ payload, secret: env.STRIPE_BILLING_WEBHOOK_SECRET });
-  res = await handle(lambdaEvent("POST", "/connect/webhooks/billing", { body: payload, headers: { "content-type": "application/json", "stripe-signature": header } }), {});
-  assert.equal(res.statusCode, 200);
+  res = await handle(new Request(`${site}/connect/webhooks/billing`, {
+    method: "POST", headers: { "content-type": "application/json", "stripe-signature": header }, body: payload,
+  }));
+  assert.equal(res.status, 200);
   assert.equal((await pdb.findUserByAccountId("acct_123")).subscription.status, "active");
 
-  // Base64-encoded bodies (how Netlify sometimes delivers them) verify too.
-  res = await handle({ ...lambdaEvent("POST", "/connect/webhooks/billing", { headers: { "content-type": "application/json", "stripe-signature": header } }), body: Buffer.from(payload).toString("base64"), isBase64Encoded: true }, {});
-  assert.equal(res.statusCode, 200);
+  // A tampered body is rejected.
+  res = await handle(new Request(`${site}/connect/webhooks/billing`, {
+    method: "POST", headers: { "content-type": "application/json", "stripe-signature": header }, body: payload.replace("active", "canceled"),
+  }));
+  assert.equal(res.status, 400);
 });
 
 test("Netlify function shows a setup page when the Stripe key is missing", async () => {
   const saved = process.env.STRIPE_SECRET_KEY;
   delete process.env.STRIPE_SECRET_KEY;
   try {
-    const event = { ...lambdaEvent("GET", "/connect/"), blobs: Buffer.from(JSON.stringify({ url: "https://blobs.example", token: "t" })).toString("base64") };
-    const res = await netlifyHandler(event, {});
-    assert.equal(res.statusCode, 500);
-    assert.match(res.body, /Missing STRIPE_SECRET_KEY/);
-    assert.match(res.body, /Environment variables/);
+    const res = await netlifyHandler(new Request("https://site.netlify.app/connect/"));
+    assert.equal(res.status, 500);
+    const html = await res.text();
+    assert.match(html, /Missing STRIPE_SECRET_KEY/);
+    assert.match(html, /Environment variables/);
   } finally {
     if (saved !== undefined) process.env.STRIPE_SECRET_KEY = saved;
   }
@@ -385,4 +384,16 @@ test("blob database round-trips through a Netlify Blobs-style store", async () =
   await bdb.setSubscription("acct_9", { status: "active" });
   assert.equal((await bdb.findUserByAccountId("acct_9")).subscription.status, "active");
   assert.equal(await bdb.setSubscription("acct_nope", {}), null);
+});
+
+test("unexpected errors show a friendly page, not a stack trace", async () => {
+  const brokenDb = { getUser: async () => { throw new Error("storage down"); }, listUsers: async () => { throw new Error("storage down"); } };
+  const app = createApp({ stripeClient: fakeStripe, db: brokenDb, env, log: () => {}, settings: { baseUrl: "x", applicationFeeCents: 123 } });
+  const s = await new Promise((r) => { const srv = app.listen(0, () => r(srv)); });
+  const res = await fetch(`http://127.0.0.1:${s.address().port}/`);
+  const html = await res.text();
+  assert.equal(res.status, 500);
+  assert.match(html, /Something went wrong/);
+  assert.doesNotMatch(html, /storage down|at /);
+  s.close();
 });
