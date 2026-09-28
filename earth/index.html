@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>LiveEarth</title>
+  <meta name="description" content="Zoomable, near-real-time satellite imagery of the whole planet: GOES and Himawari every 10 minutes, VIIRS and MODIS daily, plus the live ISS.">
+  <meta name="theme-color" content="#0b1220">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="map" aria-label="Satellite map"></div>
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="live-dot" aria-hidden="true"></span>
+      <strong>LiveEarth</strong>
+    </div>
+    <form id="search" class="search" role="search" autocomplete="off">
+      <input id="search-input" type="search" placeholder="Search a place…" aria-label="Search a place">
+    </form>
+    <button id="fresh-quick" class="icon-btn" type="button" title="Get a fresh photo of a spot" aria-label="Get a fresh photo of a spot">📸</button>
+    <button id="panel-toggle" class="icon-btn" aria-expanded="true" aria-controls="panel" title="Layers">☰</button>
+  </header>
+
+  <aside id="panel" class="panel">
+    <section>
+      <h2>Live imagery</h2>
+      <div id="layer-list" class="layer-list" role="radiogroup" aria-label="Live imagery layer"></div>
+      <label class="row">
+        <span>Opacity</span>
+        <input id="opacity" type="range" min="0" max="100" value="100">
+      </label>
+      <label class="row check">
+        <input id="smart-blend" type="checkbox" checked>
+        <span>Smart blend: fade to sharp archive imagery when zoomed past the live resolution</span>
+      </label>
+    </section>
+
+    <section>
+      <h2>Fresh satellite photo</h2>
+      <button id="fresh-open" class="primary-btn" type="button">📸 Get a fresh photo of a spot</button>
+      <p class="hint">Street-level photos taken hours or days ago, or order a satellite to capture one. Powered by SkyFi.</p>
+    </section>
+
+    <section>
+      <h2>Overlays</h2>
+      <label class="row check"><input id="ov-labels" type="checkbox" checked><span>Place names &amp; borders</span></label>
+      <label class="row check"><input id="ov-terminator" type="checkbox" checked><span>Day / night line</span></label>
+      <label class="row check"><input id="ov-iss" type="checkbox" checked><span>ISS live position</span></label>
+      <label class="row check"><input id="ov-follow" type="checkbox"><span>Follow the ISS</span></label>
+    </section>
+
+    <section class="about">
+      <details>
+        <summary>How "live" is this?</summary>
+        <p>Geostationary satellites (GOES-East, GOES-West, Himawari) photograph a whole hemisphere every 10 minutes at about 1&nbsp;km per pixel, so you see weather move in near real time, about 20–40 minutes behind.</p>
+        <p>Polar-orbiting satellites (VIIRS, MODIS) are sharper (about 250&nbsp;m) but pass over each spot once or twice a day.</p>
+        <p>The street-level detail you see when you zoom right in is archived aerial and satellite imagery, the same kind Google Maps uses. Nobody offers a public live feed at that resolution.</p>
+        <p class="src">Imagery: NASA GIBS / NOAA / JMA, Esri World Imagery. ISS: wheretheiss.at.</p>
+      </details>
+    </section>
+  </aside>
+
+  <aside id="fresh" class="fresh" hidden aria-labelledby="fresh-title">
+    <div class="fresh-head">
+      <h2 id="fresh-title">Fresh satellite photo</h2>
+      <button id="fresh-close" class="icon-btn" type="button" aria-label="Close">✕</button>
+    </div>
+    <div id="fresh-body" class="fresh-body"></div>
+  </aside>
+
+  <div class="timebar" id="timebar">
+    <button id="play" class="icon-btn" title="Play the last 2 hours" aria-label="Play">▶</button>
+    <input id="scrub" type="range" min="0" max="0" value="0" aria-label="Frame time">
+    <div class="timebar-meta">
+      <span id="frame-time">Loading…</span>
+      <span id="frame-age" class="age"></span>
+    </div>
+    <button id="now" class="pill" title="Jump to newest frame">LIVE</button>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="vendor/leaflet/leaflet.js"></script>
+  <script src="app.js"></script>
+  <script src="fresh.js"></script>
+</body>
+</html>
