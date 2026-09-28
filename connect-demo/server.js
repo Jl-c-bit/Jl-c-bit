@@ -296,11 +296,25 @@ export function createApp({ stripeClient, db, settings, env = process.env, log =
   app.use(bp || "/", router);
   if (bp) app.use("/.netlify/functions/connect", router);
 
+  // Last resort: a friendly page instead of a stack trace (details go to the logs).
+  // eslint-disable-next-line no-unused-vars
+  app.use((err, req, res, next) => {
+    log(`[error] ${req.method} ${req.originalUrl}: ${err.stack || err.message}`);
+    res.status(500).send(messagePage({
+      title: "Something went wrong", heading: "Something went wrong",
+      message: "Please try again in a moment. If it keeps happening, check the site's function logs.",
+      link: { href: "", label: "Home" },
+    }));
+  });
+
   return app;
 }
 
 // --- Start the server when run directly (not when imported by tests) ----------
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+// `import.meta.url` is undefined when Netlify bundles this file for a function,
+// so check it before using it.
+const thisFile = typeof import.meta.url === "string" ? fileURLToPath(import.meta.url) : null;
+if (thisFile && process.argv[1] === thisFile) {
   let stripeClient;
   try {
     stripeClient = createStripeClient();
@@ -309,7 +323,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     process.exit(1);
   }
   const settings = loadSettings();
-  const db = createDb(settings.dbFile);
+  const db = createDb(settings.dbFile ?? fileURLToPath(new URL("./data/db.json", import.meta.url)));
   createApp({ stripeClient, db, settings }).listen(settings.port, () => {
     console.log(`Connect demo running at ${settings.baseUrl}`);
   });
