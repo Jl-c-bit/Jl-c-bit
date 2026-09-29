@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://chimerical-crostata-fb89ec.netlify.app/pdf/sitemap.xml
