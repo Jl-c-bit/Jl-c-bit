@@ -2,7 +2,8 @@
 
 A sales dashboard for Jl-c-bit's agency, built and hosted on [Floot](https://floot.com).
 
-**Live:** https://jl-c-bit-sales.floot.app (owner login required — https://jl-c-bit-sales.floot.app/login)
+**Public site ("web design Albury" page):** https://jl-c-bit-sales.floot.app
+**Dashboard:** https://jl-c-bit-sales.floot.app/dashboard (owner login required — https://jl-c-bit-sales.floot.app/login)
 **Enquiry form (public, share with prospects):** https://jl-c-bit-sales.floot.app/enquire — every
 submission appears in the dashboard's Recent leads and emails the owner.
 
