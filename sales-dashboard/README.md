@@ -3,6 +3,8 @@
 A sales dashboard for Jl-c-bit's agency, built and hosted on [Floot](https://floot.com).
 
 **Live:** https://jl-c-bit-sales.floot.app
+**Enquiry form (share with prospects):** https://jl-c-bit-sales.floot.app/enquire — every submission
+appears in the dashboard's Recent leads as a new lead.
 
 The app's source lives in the Floot project **Jl-c-bit Sales Dashboard**
 (`1acb5b74-0dd0-4019-8d37-bef58b881ad8`); this folder only documents it.
