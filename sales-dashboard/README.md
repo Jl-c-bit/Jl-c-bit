@@ -18,6 +18,11 @@ The app's source lives in the Floot project **Jl-c-bit Sales Dashboard**
   and a stage-filterable table with client, owner, expected close date and value.
 - **Recent leads** — the 10 newest leads with source, status and estimated value.
 
+- **Prospects to contact** — an AI prospect finder that web-searches local service businesses around
+  Albury-Wodonga, checks their websites (HTTPS, mobile-friendly, stale copyright year, page weight),
+  scores the fit 1–10 and drafts an opening line. Never contacts anyone automatically.
+- **Editing** — change lead status, turn leads into deals, add deals, move deals / mark won or lost.
+
 ## How it's built
 
 | Piece | Floot item |
