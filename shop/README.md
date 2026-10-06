@@ -4,7 +4,7 @@ A dependency-free static store served at **`/shop/`** on the same Netlify site a
 
 **Features:** 12-product catalog with category filters, search and sort · product detail view ·
 cart drawer with quantity controls and stock limits · promo codes (`WELCOME10`, `FREESHIP`) ·
-free-shipping threshold, tax and totals · validated checkout form · order confirmation ·
+free-shipping threshold, tax and totals · Stripe Checkout (with a demo fallback) · order confirmation ·
 cart and orders remembered in the browser · light and dark mode · mobile layout.
 
 | File | What it does |
@@ -23,12 +23,23 @@ npm start      # http://localhost:5174
 npm test
 ```
 
-## Taking real payments
+## Payments (Stripe Checkout)
 
-Checkout currently runs in **demo mode**: it validates the order and shows a confirmation, but no card is
-charged. To take money, either:
+Checkout sends shoppers to a Stripe-hosted payment page:
 
-1. **Stripe Payment Links (no code):** create one per product in the Stripe Dashboard and link to it, or
-2. **Stripe Checkout (recommended for a multi-item cart):** add a small Netlify Function that creates a
-   Checkout Session from the cart (the `connect-demo/` app in this repo already has the Stripe client and
-   function setup to copy from), then redirect to `session.url` in `placeOrder()` in `app.js`.
+1. `app.js` posts the cart to `/shop/api/checkout`.
+2. `connect-demo/netlify/functions/shop-checkout.mjs` rebuilds prices from `products.js` on the server
+   (via `checkout.js`, so the browser can't change prices), adds tax, shipping and any promo discount
+   (as a one-time Stripe coupon), and creates a Checkout Session.
+3. Stripe collects the shipping address and card, then returns the shopper to
+   `/shop/?checkout=success`, where `/shop/api/order` confirms the payment.
+
+It uses the site's `STRIPE_SECRET_KEY` environment variable on Netlify (the same one `/connect/` uses).
+
+- **Test mode** (`sk_test_…`, current setup): pay with card `4242 4242 4242 4242`, any future date, any CVC.
+  Orders appear at https://dashboard.stripe.com/test/payments.
+- **Go live:** replace `STRIPE_SECRET_KEY` with your `sk_live_…` key in Netlify (Project configuration →
+  Environment variables) and redeploy. Note that `/connect/` uses the same variable.
+- **No key set:** checkout falls back to the demo form, which charges nothing.
+
+Tax here is a flat 8% line item. For real tax rules per region, switch to Stripe Tax (`automatic_tax`).

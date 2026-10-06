@@ -150,7 +150,28 @@ function add(id) {
 }
 
 // ---------- checkout ----------
-function openCheckout() {
+// Real payments: ask the server for a Stripe Checkout page and go there.
+// If payments aren't set up (503) or we're on a static preview, use the demo form.
+async function openCheckout() {
+  const btn = $("#checkout-btn");
+  btn.disabled = true; btn.textContent = "Opening secure checkout…";
+  try {
+    const res = await fetch("api/checkout", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ items: state.cart, promo: state.promo }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.url) { location.href = data.url; return; }
+    if (res.status !== 503 && res.status !== 404 && res.status !== 405) {
+      toast(data.error || "Checkout is unavailable right now");
+      return;
+    }
+  } catch { /* offline or no server: fall through to demo checkout */ }
+  finally { btn.disabled = core.cartCount(state.cart) === 0; btn.textContent = "Checkout"; }
+  openDemoCheckout();
+}
+
+function openDemoCheckout() {
   $("#cart").close();
   $("#checkout-totals").innerHTML = totalsHtml(totals());
   $("#pay-note").textContent = "Demo checkout: no card is charged. See README to connect Stripe.";
@@ -227,8 +248,35 @@ $("#promo-form").addEventListener("submit", (e) => {
   else $("#promo-msg").textContent = "That code isn't valid.";
 });
 
+// Back from Stripe Checkout.
+async function handleReturn() {
+  const params = new URLSearchParams(location.search);
+  const status = params.get("checkout");
+  if (!status) return;
+  history.replaceState(null, "", location.pathname);
+  if (status === "cancelled") return toast("Checkout cancelled. Your cart is saved.");
+  if (status !== "success") return;
+  state.cart = {}; state.promo = null; save();
+  let info = {};
+  try {
+    const res = await fetch(`api/order?session_id=${encodeURIComponent(params.get("session_id") || "")}`);
+    if (res.ok) info = await res.json();
+  } catch {}
+  const first = (info.name || "").split(" ")[0];
+  $("#confirm-body").innerHTML = `
+    <div class="success">
+      <div class="check">✓</div>
+      <h2 id="confirm-title">Thank you${first ? ", " + escapeHtml(first) : ""}!</h2>
+      <p>${info.paid ? `Payment of <strong>${core.formatMoney(info.total, info.currency.toUpperCase())}</strong> received` : "Your order was placed"}${info.order ? ` · order <strong>${escapeHtml(info.order)}</strong>` : ""}.</p>
+      ${info.email ? `<p class="muted">A receipt is on its way to ${escapeHtml(info.email)}.</p>` : ""}
+      <button class="btn" data-close>Keep shopping</button>
+    </div>`;
+  $("#confirm").showModal();
+}
+
 $("#free-over").textContent = money(SHIPPING.freeOver);
 $("#year").textContent = new Date().getFullYear();
 renderCategories();
 renderGrid();
 renderCart();
+handleReturn();
