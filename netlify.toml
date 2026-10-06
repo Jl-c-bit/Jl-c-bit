@@ -1,10 +1,11 @@
 # One Netlify site serves every app:
 #   /           Streakly (static)
 #   /pdf/       PrivatePDF (static)
+#   /shop/      Kindred Goods store (static)
 #   /connect/   Stripe Connect demo (Express app in a Netlify Function; the
 #               function routes itself via `config.path`)
 [build]
-  command = "(cd connect-demo && npm ci --omit=dev --no-audit --no-fund) && rm -rf dist && mkdir -p dist/pdf && cp -R streakly/. dist/ && cp -R privatepdf/. dist/pdf/ && rm -rf dist/pdf/test dist/pdf/tools dist/pdf/package.json dist/pdf/netlify.toml dist/pdf/README.md"
+  command = "(cd connect-demo && npm ci --omit=dev --no-audit --no-fund) && rm -rf dist && mkdir -p dist/pdf && cp -R streakly/. dist/ && mkdir -p dist/shop && cp -R privatepdf/. dist/pdf/ && cp -R shop/. dist/shop/ && rm -rf dist/shop/test dist/shop/package.json dist/shop/README.md && rm -rf dist/pdf/test dist/pdf/tools dist/pdf/package.json dist/pdf/netlify.toml dist/pdf/README.md"
   publish = "dist"
 
 [functions]

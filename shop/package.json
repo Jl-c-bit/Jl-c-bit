@@ -1,0 +1,11 @@
+{
+  "name": "kindred-goods-shop",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Kindred Goods: a static ecommerce storefront with cart and checkout",
+  "scripts": {
+    "test": "node --test",
+    "start": "npx --yes serve -l 5174 ."
+  }
+}
