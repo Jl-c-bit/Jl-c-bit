@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kindred Goods</title>
+  <meta name="description" content="Well-made goods for kitchen, home, desk and everyday carry." />
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="./" aria-label="Kindred Goods home">
+      <img src="icon.svg" alt="" width="28" height="28" /> Kindred Goods
+    </a>
+    <label class="search">
+      <span class="sr-only">Search products</span>
+      <input id="search" type="search" placeholder="Search products…" autocomplete="off" />
+    </label>
+    <button id="cart-btn" class="cart-btn" aria-haspopup="dialog" aria-controls="cart">
+      Cart <span id="cart-count" class="badge" aria-live="polite">0</span>
+    </button>
+  </header>
+
+  <section class="hero">
+    <div>
+      <p class="eyebrow">New season</p>
+      <h1>Well-made things for every day.</h1>
+      <p>Free shipping on orders over <strong id="free-over"></strong>. Use code <code>WELCOME10</code> for 10% off your first order.</p>
+      <a class="btn" href="#catalog">Shop the collection</a>
+    </div>
+  </section>
+
+  <main id="catalog" class="catalog">
+    <div class="toolbar">
+      <div id="categories" class="chips" role="tablist" aria-label="Categories"></div>
+      <label class="sort">Sort
+        <select id="sort">
+          <option value="featured">Featured</option>
+          <option value="price-asc">Price: low to high</option>
+          <option value="price-desc">Price: high to low</option>
+          <option value="rating">Top rated</option>
+          <option value="name">Name</option>
+        </select>
+      </label>
+    </div>
+    <p id="result-count" class="muted"></p>
+    <div id="grid" class="grid"></div>
+  </main>
+
+  <footer class="footer">
+    <p>© <span id="year"></span> Kindred Goods · 30-day returns · Secure checkout</p>
+  </footer>
+
+  <!-- Product detail -->
+  <dialog id="product-dialog" class="modal">
+    <div id="product-body"></div>
+  </dialog>
+
+  <!-- Cart drawer -->
+  <dialog id="cart" class="drawer" aria-labelledby="cart-title">
+    <div class="drawer-head">
+      <h2 id="cart-title">Your cart</h2>
+      <button class="icon-btn" data-close aria-label="Close cart">✕</button>
+    </div>
+    <div id="cart-lines" class="cart-lines"></div>
+    <form id="promo-form" class="promo">
+      <input id="promo" placeholder="Promo code" aria-label="Promo code" />
+      <button class="btn ghost" type="submit">Apply</button>
+    </form>
+    <p id="promo-msg" class="muted small" aria-live="polite"></p>
+    <dl id="totals" class="totals"></dl>
+    <button id="checkout-btn" class="btn full">Checkout</button>
+  </dialog>
+
+  <!-- Checkout -->
+  <dialog id="checkout" class="modal" aria-labelledby="checkout-title">
+    <form id="checkout-form" novalidate>
+      <div class="drawer-head">
+        <h2 id="checkout-title">Checkout</h2>
+        <button type="button" class="icon-btn" data-close aria-label="Close checkout">✕</button>
+      </div>
+      <div class="form-grid">
+        <label class="span2">Full name<input name="name" autocomplete="name" /><small></small></label>
+        <label class="span2">Email<input name="email" type="email" autocomplete="email" /><small></small></label>
+        <label class="span2">Street address<input name="address" autocomplete="street-address" /><small></small></label>
+        <label>City<input name="city" autocomplete="address-level2" /><small></small></label>
+        <label>Postal code<input name="zip" autocomplete="postal-code" /><small></small></label>
+      </div>
+      <dl id="checkout-totals" class="totals"></dl>
+      <p id="pay-note" class="muted small"></p>
+      <button class="btn full" type="submit" id="place-order">Place order</button>
+    </form>
+  </dialog>
+
+  <!-- Confirmation -->
+  <dialog id="confirm" class="modal" aria-labelledby="confirm-title">
+    <div id="confirm-body"></div>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
