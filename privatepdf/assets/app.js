@@ -80,10 +80,18 @@ if (checkoutReturned(location.search)) {
   state = { ...state, pro: true };
   saveState();
 }
+// Offline support: load the PDF code now and cache the site for later visits.
+const opsReady = cfg ? import("./pdfops.js") : null;
+opsReady?.then((ops) => ops.preload()).catch(() => { /* retried when a tool runs */ });
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register(new URL("../sw.js", import.meta.url)).catch(() => {});
+}
+
 renderPlan();
 
 // Home page has no tool.
 if (cfg) initTool();
+
 
 // ---------- Tool ----------
 
@@ -177,7 +185,7 @@ async function normalizeImage(file, bytes) {
 }
 
 async function countPages() {
-  const { pageCount } = await import("./pdfops.js");
+  const { pageCount } = await (opsReady ?? import("./pdfops.js"));
   for (const f of files) {
     if (f.pages != null) continue;
     try {
@@ -255,7 +263,7 @@ async function run() {
   let indices;
   if (tool === "split-pdf" && choice("split-mode") === "range") {
     try {
-      indices = parsePageRanges($("#pages").value, files[0].pages ?? (await (await import("./pdfops.js")).pageCount(files[0].bytes, files[0].name)));
+      indices = parsePageRanges($("#pages").value, files[0].pages ?? (await (await (opsReady ?? import("./pdfops.js"))).pageCount(files[0].bytes, files[0].name)));
     } catch (err) {
       showError(err.message);
       $("#pages").focus();
@@ -268,7 +276,7 @@ async function run() {
   setProgress(0.02, "Working… your files stay on this device.");
   let ops;
   try {
-    ops = await import("./pdfops.js");
+    ops = await (opsReady ?? import("./pdfops.js"));
     const onProgress = (f) => setProgress(f, `Working… ${Math.round(f * 100)}%`);
     const f0 = files[0];
     let outputs = []; // { name, blob }

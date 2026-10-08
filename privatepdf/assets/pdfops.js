@@ -17,6 +17,12 @@ function pdfJs() {
   return pdfJsPromise;
 }
 
+// Load both libraries ahead of time, so the tools still work if the
+// connection drops after the page has loaded.
+export function preload() {
+  return Promise.all([pdfLib(), pdfJs()]);
+}
+
 export class FriendlyError extends Error {}
 
 async function openPdf(bytes, name = "This file") {
