@@ -86,6 +86,23 @@ export async function rotate(file, deg) {
   return doc.save();
 }
 
+// position: "center" | "right" (bottom of the page)
+export async function numberPages(file, position = "center") {
+  const { StandardFonts, rgb } = await pdfLib();
+  const doc = await openPdf(file.bytes, file.name);
+  const font = await doc.embedFont(StandardFonts.Helvetica);
+  const pages = doc.getPages();
+  const size = 10;
+  pages.forEach((page, i) => {
+    const text = `${i + 1}`;
+    const { width } = page.getSize();
+    const w = font.widthOfTextAtSize(text, size);
+    const x = position === "right" ? width - 36 - w : (width - w) / 2;
+    page.drawText(text, { x, y: 22, size, font, color: rgb(0.2, 0.2, 0.2) });
+  });
+  return doc.save();
+}
+
 // images: [{ bytes, type, width, height }] where type is image/jpeg or image/png.
 // size: "fit" | "a4" | "letter"
 export async function imagesToPdf(images, size = "fit") {

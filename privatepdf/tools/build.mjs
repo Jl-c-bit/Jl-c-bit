@@ -95,6 +95,51 @@ const TOOLS = [
     steps: ["Choose a PDF.", "Tap Convert.", "Download each page as a JPG."],
     faq: [["How sharp are the images?", "Pages are saved at twice normal screen size, sharp enough to read on any phone or post online."]],
   },
+  {
+    slug: "delete-pdf-pages", name: "Delete Pages", icon: "trash",
+    title: "Delete Pages from PDF Free, Without Uploading",
+    h1: "Delete pages from a PDF",
+    lede: "Remove the pages you don't need and keep the rest.",
+    pick: "Choose a PDF", accept: ".pdf,application/pdf", multiple: false,
+    steps: ["Choose a PDF.", "Type the pages to delete, like 2, 5-7.", "Tap Delete pages and download."],
+    options: `
+      <fieldset class="opt">
+        <legend>Pages to delete</legend>
+        <div class="range-row"><label for="pages" class="sr">Pages to delete</label><input id="pages" type="text" inputmode="numeric" autocomplete="off" placeholder="e.g. 2, 5-7"><span id="page-info" class="hint"></span></div>
+      </fieldset>`,
+    faq: [["Does deleting pages change the rest of my PDF?", "No. The pages you keep are copied exactly as they were, with the same quality."]],
+  },
+  {
+    slug: "add-page-numbers", name: "Page Numbers", icon: "hash",
+    title: "Add Page Numbers to PDF Free, Without Uploading",
+    h1: "Add page numbers to a PDF",
+    lede: "Number every page of a PDF in a few seconds.",
+    pick: "Choose a PDF", accept: ".pdf,application/pdf", multiple: false,
+    steps: ["Choose a PDF.", "Pick where the numbers go.", "Tap Add page numbers and download."],
+    options: `
+      <fieldset class="opt">
+        <legend>Where</legend>
+        <label class="choice"><input type="radio" name="position" value="center" checked> <span>Bottom center</span></label>
+        <label class="choice"><input type="radio" name="position" value="right"> <span>Bottom right</span></label>
+      </fieldset>`,
+    faq: [["Can I start from a different number?", "Not yet. Numbering starts at 1 on the first page."]],
+  },
+  {
+    slug: "png-to-pdf", name: "PNG to PDF", icon: "image",
+    title: "PNG to PDF: Convert Images to PDF Free, Without Uploading",
+    h1: "Turn PNG images into a PDF",
+    lede: "Combine PNG screenshots and images into one PDF.",
+    pick: "Choose images", accept: "image/*", multiple: true,
+    steps: ["Choose your PNG images or screenshots.", "Put them in order and pick a page size.", "Tap Create PDF and download."],
+    options: `
+      <fieldset class="opt">
+        <legend>Page size</legend>
+        <label class="choice"><input type="radio" name="size" value="fit" checked> <span>Same as the image</span></label>
+        <label class="choice"><input type="radio" name="size" value="a4"> <span>A4 <small>Most countries</small></span></label>
+        <label class="choice"><input type="radio" name="size" value="letter"> <span>US Letter</span></label>
+      </fieldset>`,
+    faq: [["Do screenshots stay sharp?", "Yes. PNG images are placed in the PDF without being re-compressed."]],
+  },
 ];
 
 const SHARED_FAQ = [
@@ -109,6 +154,8 @@ const ICONS = {
   rotate: '<path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v5h-5"/>',
   image: '<rect x="4" y="4" width="16" height="16" rx="2"/><circle cx="9" cy="9" r="1.6"/><path d="m20 15-4.5-4.5L6 20"/>',
   photo: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M8 17l3-3 2 2 3-3"/>',
+  trash: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
+  hash: '<path d="M9 4 7 20M17 4l-2 16M4 9h16M3 15h16"/>',
   lock: '<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
 };
 const icon = (name, cls = "ico") => `<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONS[name]}</svg>`;
