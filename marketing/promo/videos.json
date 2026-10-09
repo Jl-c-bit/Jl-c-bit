@@ -1,0 +1,42 @@
+[
+  {
+    "id": "privatepdf-f",
+    "tool": "compress-pdf",
+    "inputs": ["scan"],
+    "hook": "PDF *too big* to email?",
+    "sub": "Shrink it without uploading it anywhere",
+    "steps": ["Pick the *big* PDF", "Choose *how small*", "Smaller file. *Never uploaded.*"],
+    "caption": "PDF too big to email? Shrink it in your browser. Free, no sign-up, nothing uploaded. Link in bio #pdf #email #lifehack #worktok #techtips",
+    "title": "PDF too big to email?"
+  },
+  {
+    "id": "privatepdf-g",
+    "tool": "split-pdf",
+    "inputs": ["tax"],
+    "hook": "Only need *pages 2-3* of a long PDF?",
+    "steps": ["Open PrivatePDF. *Free.*", "Type the *pages you want*", "New PDF. *Nothing uploaded.*"],
+    "pages": "2-3",
+    "caption": "Pull just the pages you need out of a long PDF. Free, runs on your phone, nothing uploaded. Link in bio #pdf #studytok #worktok #lifehack #productivity",
+    "title": "Pull pages out of a PDF"
+  },
+  {
+    "id": "privatepdf-h",
+    "tool": "pdf-to-jpg",
+    "inputs": ["lease"],
+    "hook": "Turn a PDF into *photos* you can post",
+    "sub": "Every page, sharp, in seconds",
+    "steps": ["Pick a *PDF*", "Tap *Convert*", "Every page saved as a *JPG*"],
+    "caption": "Need a PDF as images for Instagram or a form? Every page becomes a sharp JPG. Free, nothing uploaded. Link in bio #pdf #jpg #lifehack #techtips #productivity",
+    "title": "PDF to photos in seconds"
+  },
+  {
+    "id": "privatepdf-i",
+    "tool": "rotate-pdf",
+    "inputs": ["scan"],
+    "hook": "Scanned it *sideways* again?",
+    "steps": ["Pick the *scan*", "Choose *which way*", "Fixed. *No quality lost.*"],
+    "choose": "90",
+    "caption": "Scanned a document sideways? Rotate the whole PDF in seconds, without uploading it. Free. Link in bio #pdf #scanner #lifehack #worktok #techtips",
+    "title": "Fix a sideways scan"
+  }
+]

@@ -1,0 +1,13 @@
+{
+  "name": "privatepdf-promo",
+  "private": true,
+  "type": "module",
+  "description": "Makes vertical promo videos of PrivatePDF from videos.json",
+  "scripts": {
+    "make": "node make.mjs"
+  },
+  "devDependencies": {
+    "ffmpeg-static": "^5.2.0",
+    "playwright": "1.56.1"
+  }
+}
