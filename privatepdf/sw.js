@@ -1,7 +1,7 @@
 // PrivatePDF service worker: keeps the tools working offline.
 // Libraries are cached on install; pages and app code are fetched fresh when
 // online and served from the cache when not.
-const CACHE = "privatepdf-v2";
+const CACHE = "privatepdf-v3";
 const BASE = new URL("./", self.location).pathname; // "/pdf/"
 const PRECACHE = [
   "", "merge-pdf/", "split-pdf/", "compress-pdf/", "rotate-pdf/", "jpg-to-pdf/", "pdf-to-jpg/", "delete-pdf-pages/", "add-page-numbers/", "png-to-pdf/",
