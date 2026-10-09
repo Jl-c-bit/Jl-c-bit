@@ -57,7 +57,17 @@ function renderPlan() {
   }
 }
 
+// Anonymous visit counter: page views and a few button taps. No cookies, and
+// never anything about your files.
+function track(event) {
+  try {
+    const body = JSON.stringify(event ? { e: event } : { p: location.pathname, r: document.referrer });
+    navigator.sendBeacon?.(new URL("api/hit", new URL("../", import.meta.url)), new Blob([body], { type: "text/plain" }));
+  } catch { /* counting is optional */ }
+}
+
 function openPro(reason) {
+  track("pro_open");
   const link = $("#buy-link");
   const note = $("#buy-note");
   link.textContent = `Unlock Pro · ${PRO_PRICE_LABEL}`;
@@ -76,6 +86,8 @@ function openPro(reason) {
 
 $("#upgrade-btn").addEventListener("click", () => openPro());
 $("#close-pro").addEventListener("click", () => $("#pro-dialog").close());
+$("#buy-link").addEventListener("click", () => track("buy_click"));
+track();
 $("#support-email").textContent = SUPPORT_EMAIL;
 
 if (checkoutReturned(location.search)) {
@@ -258,6 +270,7 @@ async function run() {
   const total = files.reduce((n, f) => n + f.size, 0);
   const block = checkLimit(state, total);
   if (block) {
+    track("limit_hit");
     showError(block.message);
     openPro(block.message);
     return;
@@ -341,6 +354,7 @@ async function run() {
     }
 
     state = recordTask(state);
+    track("task_done");
     saveState();
     showResults(outputs, summary);
   } catch (err) {

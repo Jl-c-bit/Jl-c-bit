@@ -196,7 +196,7 @@ function header(active) {
 
 const footer = `<footer class="foot">
   <div class="foot-tools">${TOOLS.map((t) => `<a href="${BASE}/${t.slug}/">${t.name}</a>`).join("")}</div>
-  <p>${BRAND} runs in your browser. Your files are never uploaded.</p>
+  <p>${BRAND} runs in your browser. Your files are never uploaded. We count page visits anonymously, with no cookies.</p>
   <p>Questions? <span class="email" id="support-email"></span></p>
 </footer>`;
 

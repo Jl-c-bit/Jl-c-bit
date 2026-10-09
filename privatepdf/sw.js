@@ -1,7 +1,7 @@
 // PrivatePDF service worker: keeps the tools working offline.
 // Libraries are cached on install; pages and app code are fetched fresh when
 // online and served from the cache when not.
-const CACHE = "privatepdf-v3";
+const CACHE = "privatepdf-v4";
 const BASE = new URL("./", self.location).pathname; // "/pdf/"
 const PRECACHE = [
   "", "merge-pdf/", "split-pdf/", "compress-pdf/", "rotate-pdf/", "jpg-to-pdf/", "pdf-to-jpg/", "delete-pdf-pages/", "add-page-numbers/", "png-to-pdf/",
@@ -25,6 +25,7 @@ self.addEventListener("fetch", (event) => {
   const req = event.request;
   const url = new URL(req.url);
   if (req.method !== "GET" || url.origin !== self.location.origin || !url.pathname.startsWith(BASE)) return;
+  if (url.pathname.startsWith(BASE + "api/") || url.pathname.startsWith(BASE + "promo/")) return;
 
   // Vendored libraries never change at the same URL: cache first.
   if (url.pathname.startsWith(BASE + "assets/vendor/")) {
