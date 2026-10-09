@@ -1,7 +1,8 @@
 name: PrivatePDF stats
 
-# Prints PrivatePDF's anonymous visit counts in the job log, so they can be
-# read without opening the site. Run it from the Actions tab or on schedule.
+# Posts PrivatePDF's anonymous visit counts as a notice on the run (readable
+# through the GitHub API as a check-run annotation). Run it from the Actions
+# tab or on schedule.
 on:
   workflow_dispatch:
   schedule:
@@ -13,7 +14,6 @@ jobs:
     steps:
       - name: Fetch visit counts
         run: |
-          echo "STATS_BEGIN"
-          curl -fsS https://chimerical-crostata-fb89ec.netlify.app/pdf/api/stats
-          echo
-          echo "STATS_END"
+          data=$(curl -fsS https://chimerical-crostata-fb89ec.netlify.app/pdf/api/stats | tr -d '\n')
+          echo "$data"
+          echo "::notice title=pdf-stats::$data"
