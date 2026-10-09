@@ -15,6 +15,9 @@ const TOOLS = {
   "compress-pdf": { kind: "pdf", multiple: false, min: 1, run: "Compress PDF" },
   "rotate-pdf": { kind: "pdf", multiple: false, min: 1, run: "Rotate PDF" },
   "jpg-to-pdf": { kind: "image", multiple: true, min: 1, run: "Create PDF", reorder: true },
+  "png-to-pdf": { kind: "image", multiple: true, min: 1, run: "Create PDF", reorder: true },
+  "delete-pdf-pages": { kind: "pdf", multiple: false, min: 1, run: "Delete pages" },
+  "add-page-numbers": { kind: "pdf", multiple: false, min: 1, run: "Add page numbers" },
   "pdf-to-jpg": { kind: "pdf", multiple: false, min: 1, run: "Convert to JPG" },
 };
 const cfg = TOOLS[tool];
@@ -261,6 +264,18 @@ async function run() {
   }
   // Validate options before starting.
   let indices;
+  if (tool === "delete-pdf-pages") {
+    try {
+      const count = files[0].pages ?? (await (await (opsReady ?? import("./pdfops.js"))).pageCount(files[0].bytes, files[0].name));
+      const drop = new Set(parsePageRanges($("#pages").value, count));
+      if (drop.size >= count) throw new Error("That would delete every page. Leave at least one.");
+      indices = [...Array(count).keys()].filter((i) => !drop.has(i));
+    } catch (err) {
+      showError(err.message);
+      $("#pages").focus();
+      return;
+    }
+  }
   if (tool === "split-pdf" && choice("split-mode") === "range") {
     try {
       indices = parsePageRanges($("#pages").value, files[0].pages ?? (await (await (opsReady ?? import("./pdfops.js"))).pageCount(files[0].bytes, files[0].name)));
@@ -309,7 +324,14 @@ async function run() {
       const angle = Number(choice("angle") || 90);
       outputs = [{ name: outputName(f0.name, "rotated"), blob: pdfBlob(await ops.rotate(f0, angle)) }];
       summary = "Every page turned. Nothing was re-compressed.";
-    } else if (tool === "jpg-to-pdf") {
+    } else if (tool === "delete-pdf-pages") {
+      const removed = (f0.pages ?? indices.length) - indices.length;
+      outputs = [{ name: outputName(f0.name, "edited"), blob: pdfBlob(await ops.extract(f0, indices)) }];
+      summary = `${removed} page${removed === 1 ? "" : "s"} deleted. ${indices.length} left.`;
+    } else if (tool === "add-page-numbers") {
+      outputs = [{ name: outputName(f0.name, "numbered"), blob: pdfBlob(await ops.numberPages(f0, choice("position") || "center")) }];
+      summary = "Page numbers added to every page.";
+    } else if (tool === "jpg-to-pdf" || tool === "png-to-pdf") {
       outputs = [{ name: outputName(files.length === 1 ? f0.name : "images", "pdf").replace(/-pdf\.pdf$/, ".pdf"), blob: pdfBlob(await ops.imagesToPdf(files, choice("size") || "fit")) }];
       summary = `${files.length} image${files.length === 1 ? "" : "s"} in one PDF.`;
     } else if (tool === "pdf-to-jpg") {
