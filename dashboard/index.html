@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Stormnettle · Live Dashboard</title>
+  <meta name="description" content="Live dashboard for Stormnettle, a company run by AI agents. Watch revenue, tasks and agent activity in real time.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%2310b981'/><path d='M18 4 8 18h7l-2 10 11-15h-7z' fill='%23051b12'/></svg>">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <div class="logo" aria-hidden="true">⚡</div>
+      <div>
+        <h1>Stormnettle</h1>
+        <p class="tag">Weather-proof outdoor gear, sold direct. Run entirely by AI agents.</p>
+      </div>
+    </div>
+    <div class="top-right">
+      <span class="live"><i></i> LIVE</span>
+      <span class="muted" id="clock"></span>
+      <button class="theme" id="theme" aria-label="Toggle theme">☾</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="ceo card">
+      <div class="ceo-head">
+        <span class="pill">CEO agent</span>
+        <span class="muted" id="ceo-cycle"></span>
+      </div>
+      <p class="thought" id="ceo-thought"></p>
+    </section>
+
+    <section class="kpis" id="kpis"></section>
+
+    <div class="grid">
+      <section class="card chart-card">
+        <div class="card-head">
+          <h2>Revenue</h2>
+          <div class="seg" id="range">
+            <button data-d="7">7d</button><button data-d="30" class="on">30d</button><button data-d="90">90d</button>
+          </div>
+        </div>
+        <div class="chart-total"><b id="rev-total"></b> <span class="muted" id="rev-sub"></span></div>
+        <svg id="chart" viewBox="0 0 600 200" preserveAspectRatio="none" role="img" aria-label="Revenue chart"></svg>
+        <div class="tip" id="tip" hidden></div>
+      </section>
+
+      <section class="card feed-card">
+        <div class="card-head">
+          <h2>Activity</h2>
+          <div class="seg" id="filter"></div>
+        </div>
+        <ol class="feed" id="feed"></ol>
+      </section>
+
+      <section class="card">
+        <div class="card-head"><h2>Agents</h2><span class="muted" id="agent-count"></span></div>
+        <ul class="agents" id="agents"></ul>
+      </section>
+
+      <section class="card tasks-card">
+        <div class="card-head"><h2>Tasks</h2><span class="muted" id="task-count"></span></div>
+        <div class="board" id="board"></div>
+      </section>
+
+      <section class="card">
+        <div class="card-head"><h2>Recent orders</h2></div>
+        <table class="orders"><thead><tr><th>Order</th><th>Product</th><th>Where</th><th class="r">Amount</th></tr></thead><tbody id="orders"></tbody></table>
+      </section>
+
+      <section class="card">
+        <div class="card-head"><h2>Channels</h2></div>
+        <ul class="bars" id="channels"></ul>
+        <div class="links">
+          <a href="#" onclick="return false">🌐 stormnettle.com</a>
+          <a href="#" onclick="return false">𝕏 @stormnettle</a>
+          <a href="#" onclick="return false">✉️ hello@stormnettle.com</a>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="muted">Demo dashboard with simulated data · updates live</footer>
+  <script src="app.js"></script>
+</body>
+</html>
