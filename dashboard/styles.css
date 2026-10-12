@@ -25,6 +25,8 @@ h2{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--mute
 .live{display:flex;align-items:center;gap:6px;color:var(--accent);font-weight:700}
 .live i{width:8px;height:8px;border-radius:50%;background:var(--accent);animation:pulse 1.6s infinite}
 @keyframes pulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--accent) 60%,transparent)}100%{box-shadow:0 0 0 8px transparent}}
+.src{border:1px solid var(--line);color:var(--muted);padding:2px 8px;border-radius:99px}
+.src.on{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 50%,var(--line))}
 .theme{background:none;border:1px solid var(--line);color:var(--text);border-radius:8px;width:30px;height:30px;cursor:pointer;font-size:16px;line-height:1}
 main{max-width:1280px;margin:0 auto;padding:20px 24px}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;min-width:0;position:relative}
@@ -88,6 +90,6 @@ main{max-width:1280px;margin:0 auto;padding:20px 24px}
 footer{text-align:center;font-size:12px;padding:24px}
 @media (max-width:1000px){.kpis{grid-template-columns:repeat(3,1fr)}.grid{grid-template-columns:minmax(0,1fr)}.feed-card{grid-row:auto;max-height:520px}.tasks-card{grid-column:auto}}
 @media (max-width:600px){
-  .top{padding:12px 16px}.tag{display:none}#clock{display:none}
+  .top{padding:12px 16px}.tag{display:none}#clock{display:none}.live{display:none}
   main{padding:16px}.kpis{grid-template-columns:repeat(2,1fr)}.board{grid-template-columns:1fr}
 }

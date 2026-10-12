@@ -18,6 +18,7 @@
       </div>
     </div>
     <div class="top-right">
+      <span class="src" id="src">Demo data</span>
       <span class="live"><i></i> LIVE</span>
       <span class="muted" id="clock"></span>
       <button class="theme" id="theme" aria-label="Toggle theme">☾</button>
@@ -72,7 +73,7 @@
       </section>
 
       <section class="card">
-        <div class="card-head"><h2>Channels</h2></div>
+        <div class="card-head"><h2 id="channels-title">Channels</h2></div>
         <ul class="bars" id="channels"></ul>
         <div class="links">
           <a href="#" onclick="return false">🌐 stormnettle.com</a>
@@ -83,7 +84,7 @@
     </div>
   </main>
 
-  <footer class="muted">Demo dashboard with simulated data · updates live</footer>
+  <footer class="muted" id="foot">Demo dashboard with simulated data · updates live</footer>
   <script src="app.js"></script>
 </body>
 </html>

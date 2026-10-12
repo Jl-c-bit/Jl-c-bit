@@ -1,0 +1,11 @@
+{
+  "name": "stormnettle-dashboard",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Stormnettle: a live dashboard for a company run by AI agents",
+  "scripts": {
+    "test": "node --test",
+    "start": "npx --yes serve -l 5175 ."
+  }
+}

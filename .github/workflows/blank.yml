@@ -33,6 +33,10 @@ jobs:
         working-directory: shop
         run: npm test
 
+      - name: Test Stormnettle dashboard
+        working-directory: dashboard
+        run: npm test
+
       - name: Test Connect demo and site functions
         working-directory: connect-demo
         run: npm ci --no-audit --no-fund && npm test
