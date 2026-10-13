@@ -13,9 +13,14 @@ It's modeled on the public company dashboards on Polsia. Served at `/dashboard/`
 ## Real sales data (Stripe)
 
 `/dashboard/api/stats` (`connect-demo/netlify/functions/dashboard-stats.mjs`) reads succeeded
-charges with the site's `STRIPE_SECRET_KEY`, the same key the shop uses. It sums them with
+charges with `DASHBOARD_STRIPE_KEY`, or with the shop's `STRIPE_SECRET_KEY` when that isn't set. It sums them with
 `stats.js` and caches the result for 5 minutes. The page asks it for data on load and every 5 minutes.
 The badge in the header says **Stripe · live** or **Stripe · test mode**, matching the key.
+
+**Setting the key:** in Stripe, create a restricted live key (Developers → API keys → Create restricted key)
+with only **Charges: Read** allowed. Add it on Netlify (Site configuration → Environment variables) as
+`DASHBOARD_STRIPE_KEY`, then redeploy. Because the key can only read charges, it can't move money even if it leaked.
+The shop keeps using its own `STRIPE_SECRET_KEY`.
 
 - Refunds are subtracted, and failed or fully refunded charges are ignored.
 - If charges come in more than one currency, only the most common one is counted.

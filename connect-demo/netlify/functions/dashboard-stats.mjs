@@ -1,8 +1,10 @@
 // -----------------------------------------------------------------------------
 // Real sales numbers for the Stormnettle dashboard:  GET /dashboard/api/stats
 //
-// Reads succeeded charges from the site's Stripe account (STRIPE_SECRET_KEY,
-// the same key the shop uses) and returns totals only, via dashboard/stats.js.
+// Reads succeeded charges from Stripe and returns totals only, via dashboard/stats.js.
+// Key: DASHBOARD_STRIPE_KEY if set, otherwise the shop's STRIPE_SECRET_KEY. That
+// lets the shop stay on a test key while the dashboard reads live sales. Use a
+// restricted key (rk_live_...) with only "Charges: Read" for DASHBOARD_STRIPE_KEY.
 // Answers 503 when no key is set, and the dashboard falls back to demo data.
 // Responses are cached for 5 minutes so page views don't each call Stripe.
 // -----------------------------------------------------------------------------
@@ -40,7 +42,7 @@ export function createHandler(getStripe, now = () => Date.now()) {
 
 let client;
 export default createHandler(() => {
-  const key = Netlify.env.get("STRIPE_SECRET_KEY")?.trim();
+  const key = (Netlify.env.get("DASHBOARD_STRIPE_KEY") || Netlify.env.get("STRIPE_SECRET_KEY"))?.trim();
   if (!key) return null;
   return (client ??= new Stripe(key));
 });
