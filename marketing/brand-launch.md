@@ -1,5 +1,7 @@
 # Brand launch: names and first-week posts
 
+**Chosen names: ListingRadar (Telegram alert bot) and OrderTap (WhatsApp ordering).** The other options below are kept for reference.
+
 All posts go on **new brand accounts only**, never personal ones. Check that each name is free as a handle on Telegram, X, TikTok and Instagram, and as a .com or .app domain, before committing to it.
 
 ## Brand names

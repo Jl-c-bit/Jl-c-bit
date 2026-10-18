@@ -1,9 +1,9 @@
 {
-  "name": "mexc-alert-bot",
+  "name": "listingradar",
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Telegram bot: MEXC new-listing, price-target and big-move alerts, with a Telegram Stars Pro plan",
+  "description": "ListingRadar Telegram bot: MEXC new-listing, price-target and big-move alerts, with a Telegram Stars Pro plan",
   "engines": { "node": ">=18" },
   "scripts": {
     "test": "node --test",

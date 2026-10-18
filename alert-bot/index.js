@@ -45,4 +45,4 @@ every(30_000, "prices", bot.checkPrices);
   }
 })();
 
-console.log("MEXC alert bot running.");
+console.log("ListingRadar bot running.");

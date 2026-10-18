@@ -1,10 +1,10 @@
-# Selling WhatsApp ordering to local businesses
+# Selling OrderTap to local businesses
 
 ## The offer
 
 > "Your customers can order from you on WhatsApp 24/7, from a menu bot with your name on it. Orders land on your phone and a screen at the counter. No app for customers to download, and no 15–30% commission like the delivery apps."
 
-The main selling point is that delivery apps take **15–30% of every order**. A restaurant doing $3,000/month through those apps pays $450–900. Your bot costs a flat fee.
+The main selling point is that delivery apps take **15–30% of every order**. A restaurant doing $3,000/month through those apps pays $450–900. OrderTap costs a flat fee.
 
 ## Pricing (suggested)
 
@@ -36,7 +36,7 @@ Skip big chains and places already happy with a full POS ordering system.
 
 ## Opening message (WhatsApp / DM)
 
-> Hi [Name], I help local food spots take orders on WhatsApp automatically. Customers text your number, pick from your menu, and the order shows up for you ready to go. No app fees or commission, just a flat monthly price. Can I send you a 30-second demo? First month's free.
+> Hi [Name], I run OrderTap. We help local food spots take orders on WhatsApp automatically. Customers text your number, pick from your menu, and the order shows up for you ready to go. No app fees or commission, just a flat monthly price. Can I send you a 30-second demo? First month's free.
 
 ## Demo
 

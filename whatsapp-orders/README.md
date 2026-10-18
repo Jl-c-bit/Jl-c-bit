@@ -1,4 +1,4 @@
-# WhatsApp Orders
+# OrderTap (WhatsApp ordering)
 
 A WhatsApp ordering bot you run **for local shops and restaurants** and charge a monthly fee for. One server handles all your clients. Each business has its own WhatsApp number, menu, and orders page.
 

@@ -26,4 +26,4 @@ startServer(
   },
   port,
 );
-console.log(`WhatsApp ordering bot for ${businesses.length} business(es) on :${port}`);
+console.log(`OrderTap: WhatsApp ordering for ${businesses.length} business(es) on :${port}`);

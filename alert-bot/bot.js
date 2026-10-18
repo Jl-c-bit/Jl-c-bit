@@ -81,7 +81,7 @@ export function createBot({ tg, mexc, state, config, save = () => {}, now = () =
 
       case "upgrade":
         return tg.sendStarsInvoice(chatId, {
-          title: "MEXC Alerts Pro (30 days)",
+          title: "ListingRadar Pro (30 days)",
           description: `Up to ${core.PLANS.pro.maxTargets} price alerts plus instant big-move alerts.`,
           payload: "pro30",
           stars: config.proStars,

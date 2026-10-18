@@ -1,9 +1,9 @@
 {
-  "name": "whatsapp-orders",
+  "name": "ordertap",
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "WhatsApp ordering bot for local shops and restaurants, multi-business with monthly billing",
+  "description": "OrderTap: WhatsApp ordering bot for local shops and restaurants, multi-business with monthly billing",
   "engines": { "node": ">=18" },
   "scripts": {
     "test": "node --test",

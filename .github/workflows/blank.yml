@@ -33,11 +33,11 @@ jobs:
         working-directory: shop
         run: npm test
 
-      - name: Test MEXC alert bot
+      - name: Test ListingRadar (Telegram alert bot)
         working-directory: alert-bot
         run: npm test
 
-      - name: Test WhatsApp ordering bot
+      - name: Test OrderTap (WhatsApp ordering)
         working-directory: whatsapp-orders
         run: npm test
 

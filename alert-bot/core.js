@@ -97,7 +97,7 @@ export function targetMessage(target, price, inviteCode) {
 }
 
 export const HELP = [
-  "MEXC Alerts: new listings and price alerts.",
+  "📡 ListingRadar: new MEXC listings and price alerts.",
   "",
   "/alert BTC 70000  alert when BTC reaches 70,000",
   "/alerts  list your alerts",

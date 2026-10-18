@@ -1,4 +1,4 @@
-# MEXC Alerts (Telegram bot)
+# ListingRadar (Telegram bot)
 
 A Telegram bot that sends:
 
@@ -13,14 +13,14 @@ No dependencies. Needs Node 18+.
 ## Setup (about 10 minutes)
 
 1. In Telegram, message **@BotFather**, send `/newbot`, and copy the token.
-2. Optional: create a public channel (e.g. `@MexcNewListings`) and add your bot as an admin. Listings get posted there, and it's your free marketing funnel.
+2. Optional: create a public channel (e.g. `@ListingRadar`) and add your bot as an admin. Listings get posted there, and it's your free marketing funnel.
 3. Get your MEXC referral code: MEXC app → Profile → Referral.
 4. Run it:
 
 ```bash
 TELEGRAM_TOKEN=123:abc \
 MEXC_INVITE_CODE=yourcode \
-CHANNEL_ID=@MexcNewListings \
+CHANNEL_ID=@ListingRadar \
 npm start
 ```
 
