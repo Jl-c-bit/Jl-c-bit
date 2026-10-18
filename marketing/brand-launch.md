@@ -83,6 +83,8 @@ Square brackets are fill-ins. Use **real** alerts from the bot, never invented n
 
 ## OrderTap: week 1 (Instagram + Facebook page, aimed at shop owners)
 
+Images for Days 1, 3, 4, 6 and 7 (plus a profile picture) are in `ordertap-site/social/`. See `marketing/ordertap-images/README.md`.
+
 **Day 1 (the problem)**
 > Delivery apps take 15–30% of every order.
 >
