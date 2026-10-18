@@ -2,9 +2,10 @@
 import fs from "node:fs";
 import { createSender, startServer } from "./server.js";
 
+// Hosts without file uploads (e.g. Railway) can pass the whole list in BUSINESSES_JSON instead.
 const businessesFile = process.env.BUSINESSES_FILE || "businesses.json";
-if (!fs.existsSync(businessesFile)) {
-  console.error(`Missing ${businessesFile}. Copy businesses.example.json to get started.`);
+if (!process.env.BUSINESSES_JSON && !fs.existsSync(businessesFile)) {
+  console.error(`Missing ${businessesFile} (or set BUSINESSES_JSON). Copy businesses.example.json to get started.`);
   process.exit(1);
 }
 if (!process.env.VERIFY_TOKEN) {
@@ -13,7 +14,7 @@ if (!process.env.VERIFY_TOKEN) {
 }
 if (!process.env.APP_SECRET) console.warn("APP_SECRET not set: webhook signatures are NOT being checked.");
 
-const businesses = JSON.parse(fs.readFileSync(businessesFile, "utf8"));
+const businesses = JSON.parse(process.env.BUSINESSES_JSON || fs.readFileSync(businessesFile, "utf8"));
 const port = Number(process.env.PORT || 3000);
 
 startServer(

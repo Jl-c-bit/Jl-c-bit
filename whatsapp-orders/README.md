@@ -37,6 +37,8 @@ Meta charges per conversation, but **customer-started service conversations are 
 cp businesses.example.json businesses.json
 ```
 
+On hosts where you can't upload files (like Railway), paste the whole JSON list into a `BUSINESSES_JSON` variable instead. It takes priority over the file.
+
 Set `phoneNumberId`, `ownerPhone` (digits with country code), a long random `dashboardKey`, the `menu` (prices in cents), and `paidUntil`.
 
 ### 3. Run and connect the webhook
@@ -49,7 +51,7 @@ Deploy it to an always-on host with HTTPS and a persistent disk for `orders/` (R
 
 ### 4. Billing
 
-When a client pays their monthly fee:
+When a client pays their monthly fee, push their `paidUntil` date forward. With `BUSINESSES_JSON`, edit the date in the variable (the host restarts the server). With a file:
 
 ```bash
 node admin.js extend marios-pizza 30   # adds 30 days
