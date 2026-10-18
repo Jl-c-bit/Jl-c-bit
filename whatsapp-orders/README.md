@@ -60,6 +60,17 @@ node admin.js list                     # who's active / paused
 
 Restart the server after editing `businesses.json` or menus.
 
+### 5. Customer data deletion requests
+
+The privacy policy promises to delete a customer's data within 30 days of a request. To delete every order from that number, across all businesses:
+
+```bash
+node admin.js forget "0412 345 678"     # local format matches any country code
+node admin.js forget "+61 412 345 678"  # or the full international number
+```
+
+On Railway, run it on the server itself, where the orders are stored: install the Railway CLI, then `railway ssh` into the OrderTap service and run the command there. Order numbers keep counting up after a deletion, so they never repeat.
+
 ## Good to know
 
 - WhatsApp only lets a business send free-form messages within 24 hours of someone's last message. So order notifications to the **owner** reach them only if the owner has messaged the bot number in the last 24 hours. The orders page always works. For reliable owner alerts, have the owner send "hi" each morning, or set up an approved message template.
