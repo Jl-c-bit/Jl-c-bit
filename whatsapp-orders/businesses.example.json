@@ -1,0 +1,23 @@
+[
+  {
+    "id": "marios-pizza",
+    "name": "Mario's Pizza",
+    "plan": "Standard $49/mo",
+    "phoneNumberId": "123456789012345",
+    "ownerPhone": "15551234567",
+    "dashboardKey": "change-me-to-a-long-random-string",
+    "currency": "USD",
+    "paidUntil": "2026-11-18",
+    "greeting": "Hi! 👋 Welcome to Mario's Pizza. Order here and we'll have it hot and ready.",
+    "confirmMessage": "✅ Order received! Pickup in about 20 minutes. Pay at the counter or on delivery.",
+    "delivery": { "enabled": true, "fee": 300 },
+    "menu": [
+      { "category": "Pizza", "name": "Margherita (12\")", "price": 1200 },
+      { "category": "Pizza", "name": "Pepperoni (12\")", "price": 1400 },
+      { "category": "Pizza", "name": "Veggie Supreme (12\")", "price": 1500 },
+      { "category": "Sides", "name": "Garlic knots (6)", "price": 500 },
+      { "category": "Sides", "name": "Caesar salad", "price": 700 },
+      { "category": "Drinks", "name": "Soda (can)", "price": 200 }
+    ]
+  }
+]

@@ -33,6 +33,14 @@ jobs:
         working-directory: shop
         run: npm test
 
+      - name: Test MEXC alert bot
+        working-directory: alert-bot
+        run: npm test
+
+      - name: Test WhatsApp ordering bot
+        working-directory: whatsapp-orders
+        run: npm test
+
       - name: Test Connect demo and site functions
         working-directory: connect-demo
         run: npm ci --no-audit --no-fund && npm test
