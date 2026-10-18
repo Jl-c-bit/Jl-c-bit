@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8" />
+<title>OrderTap social cards</title>
+<style>
+  :root {
+    --forest: #0c3b2c;
+    --forest-2: #134d3a;
+    --mint: #34d683;
+    --cream: #fbf6ec;
+    --ink: #142019;
+    --coral: #ff6b4a;
+    --muted: #5c6b63;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #888; font-family: "Inter", sans-serif; }
+  .card {
+    width: 1080px; height: 1350px; position: relative; overflow: hidden;
+    padding: 96px 88px; display: flex; flex-direction: column;
+    background: var(--cream); color: var(--ink); margin-bottom: 40px;
+  }
+  .card.dark { background: var(--forest); color: var(--cream); }
+  .display { font-family: "Inter Display", "Inter", sans-serif; font-weight: 800; letter-spacing: -0.03em; line-height: 0.98; }
+  .brand { display: flex; align-items: center; gap: 18px; font: 700 36px "Inter Display", sans-serif; letter-spacing: -0.02em; }
+  .brand svg { width: 64px; height: 64px; }
+  .foot { margin-top: auto; display: flex; justify-content: space-between; align-items: center; gap: 32px; }
+  .cta { white-space: nowrap; flex: none; background: var(--mint); color: var(--forest); font: 800 38px "Inter Display", sans-serif; padding: 26px 40px; border-radius: 999px; letter-spacing: -0.01em; }
+  .dark .cta { white-space: nowrap; flex: none; background: var(--mint); }
+  .eyebrow { font: 700 30px "Inter", sans-serif; text-transform: uppercase; letter-spacing: 0.12em; color: var(--mint); }
+  .card:not(.dark) .eyebrow { color: #138a50; }
+
+  /* 1. Commission */
+  .commission h1 { font-size: 104px; margin: 64px 0 0; }
+  .commission h1 em { font-style: normal; color: var(--coral); }
+  .bill { margin-top: 72px; background: var(--forest-2); border-radius: 36px; padding: 48px 56px; }
+  .bill .row { display: flex; justify-content: space-between; font: 500 40px Inter, sans-serif; padding: 14px 0; color: #cfe3d8; }
+  .bill .row.total { border-top: 2px dashed #3d7a62; margin-top: 18px; padding-top: 30px; color: var(--cream); font-weight: 800; font-size: 48px; }
+  .bill .row.total span:last-child { color: var(--coral); }
+  .bill .row.us span:last-child { color: var(--mint); font-weight: 800; }
+
+  /* 2. How it works */
+  .how h1 { font-size: 88px; margin: 48px 0 40px; }
+  .how-grid { display: grid; grid-template-columns: 430px 1fr; gap: 56px; align-items: center; }
+  .phone { background: #e9e2d6; border: 14px solid var(--ink); border-radius: 56px; padding: 30px 22px; height: 790px; overflow: hidden; display: flex; flex-direction: column; gap: 12px; font: 500 23px/1.3 Inter, sans-serif; }
+  .phone .shop { text-align: center; font-weight: 700; font-size: 24px; color: var(--muted); padding-bottom: 6px; }
+  .bubble { padding: 12px 18px; border-radius: 22px; max-width: 88%; box-shadow: 0 1px 0 #0001; }
+  .bubble.in { background: #fff; align-self: flex-start; border-top-left-radius: 6px; }
+  .bubble.out { background: #d6f6c8; align-self: flex-end; border-top-right-radius: 6px; }
+  .bubble b { font-weight: 800; }
+  .steps { list-style: none; display: flex; flex-direction: column; gap: 34px; }
+  .steps li { display: flex; gap: 24px; align-items: flex-start; font: 600 38px/1.2 Inter, sans-serif; }
+  .steps .n { flex: none; width: 64px; height: 64px; border-radius: 50%; background: var(--forest); color: var(--mint); display: grid; place-items: center; font: 800 32px "Inter Display", sans-serif; }
+  .steps small { display: block; font-weight: 500; font-size: 28px; color: var(--muted); margin-top: 6px; }
+
+  /* 3. Objection */
+  .objection blockquote { font-size: 128px; margin: 80px 0 72px; }
+  .objection blockquote::before { content: "“"; color: var(--mint); }
+  .objection blockquote::after { content: "”"; color: var(--mint); }
+  .vs { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+  .vs .col { border-radius: 32px; padding: 40px 36px; }
+  .vs .phonecall { background: #2a1e1a; }
+  .vs .wa { background: var(--forest-2); }
+  .vs h3 { font: 800 38px "Inter Display", sans-serif; margin-bottom: 26px; }
+  .vs ul { list-style: none; display: flex; flex-direction: column; gap: 24px; font: 500 34px/1.25 Inter, sans-serif; }
+  .vs .phonecall li::before { content: "✕  "; color: var(--coral); font-weight: 800; }
+  .objection .closer { margin-top: 64px; font-size: 64px; color: var(--mint); }
+  .vs .wa li::before { content: "✓  "; color: var(--mint); font-weight: 800; }
+
+  /* 4. Pricing */
+  .pricing h1 { font-size: 96px; margin: 56px 0 56px; }
+  .plans { display: flex; flex-direction: column; gap: 24px; }
+  .plan { display: grid; grid-template-columns: 1fr auto; align-items: center; background: #fff; border: 3px solid #e4ddd0; border-radius: 30px; padding: 34px 44px; }
+  .plan.pop { border-color: var(--forest); background: var(--forest); color: var(--cream); }
+  .plan h3 { font: 800 44px "Inter Display", sans-serif; }
+  .plan p { font: 500 28px Inter, sans-serif; color: var(--muted); margin-top: 6px; }
+  .plan.pop p { color: #b8d6c7; }
+  .plan .price { font: 800 64px "Inter Display", sans-serif; letter-spacing: -0.03em; }
+  .plan .price small { font-size: 30px; font-weight: 600; }
+  .tag { display: inline-block; background: var(--mint); color: var(--forest); font: 800 22px Inter, sans-serif; padding: 6px 14px; border-radius: 999px; margin-left: 14px; vertical-align: 8px; letter-spacing: 0.04em; }
+  .fine { margin-top: 40px; font: 600 34px Inter, sans-serif; text-align: center; }
+  .fine b { color: #138a50; }
+
+  /* 5. Local call-out */
+  .local h1 { font-size: 124px; margin: 80px 0 40px; }
+  .local h1 span { color: var(--mint); }
+  .local .sub { font: 500 44px/1.3 Inter, sans-serif; color: #cfe3d8; max-width: 860px; }
+  .spots { display: flex; gap: 22px; margin-top: 72px; }
+  .spot { width: 150px; height: 150px; border-radius: 40px; border: 5px dashed #4e8f74; display: grid; place-items: center; font: 800 56px "Inter Display", sans-serif; color: #4e8f74; }
+  .spot.taken { background: var(--mint); border: none; color: var(--forest); }
+  .spots-label { margin-top: 24px; font: 600 32px Inter, sans-serif; color: #cfe3d8; }
+
+  /* Avatar */
+  .avatar { width: 1080px; height: 1080px; background: var(--forest); display: grid; place-items: center; margin-bottom: 40px; }
+  .avatar svg { width: 640px; height: 640px; }
+</style>
+</head>
+<body>
+
+<template id="logo">
+  <svg viewBox="0 0 64 64" aria-hidden="true">
+    <path d="M32 4C16.5 4 4 15.4 4 29.5c0 7 3.1 13.3 8.1 17.9L9.5 59l13-6.3c2.9.9 6.1 1.3 9.5 1.3 15.5 0 28-11.4 28-25.5S47.5 4 32 4z" fill="#34d683"/>
+    <circle cx="32" cy="29" r="7" fill="#0c3b2c"/>
+    <circle cx="32" cy="29" r="14.5" fill="none" stroke="#0c3b2c" stroke-width="4" opacity=".55"/>
+  </svg>
+</template>
+
+<!-- 1. Delivery apps take up to 30% -->
+<section class="card dark commission" id="ordertap-1-commission">
+  <div class="brand" data-logo>OrderTap</div>
+  <h1 class="display">Delivery apps take up to <em>30%</em> of every order.</h1>
+  <div class="bill">
+    <div class="row"><span>Monthly app orders</span><span>$3,000</span></div>
+    <div class="row"><span>Commission at 15–30%</span><span>$450–900</span></div>
+    <div class="row total"><span>Gone every month</span><span>up to $900</span></div>
+    <div class="row us" style="margin-top:18px"><span>With OrderTap</span><span>$0 commission</span></div>
+  </div>
+  <div class="foot"><span class="eyebrow">Orders straight to your WhatsApp</span><span class="cta">DM “DEMO”</span></div>
+</section>
+
+<!-- 2. How it works -->
+<section class="card how" id="ordertap-2-how-it-works">
+  <div class="brand" data-logo>OrderTap</div>
+  <h1 class="display">Orders on WhatsApp, in 4 taps.</h1>
+  <div class="how-grid">
+    <div class="phone">
+      <div class="shop">Mario’s Pizza</div>
+      <div class="bubble out">hi</div>
+      <div class="bubble in">Hi! 👋 Here’s our menu:<br>1. Margherita – $12<br>2. Pepperoni – $14<br>3. Garlic knots – $5</div>
+      <div class="bubble out">1x2, 3</div>
+      <div class="bubble in">Added ✅ Total <b>$29.00</b></div>
+      <div class="bubble out">done</div>
+      <div class="bubble in">Pickup or delivery?</div>
+      <div class="bubble out">pickup</div>
+      <div class="bubble in">✅ Order received! Ready in 20 min.</div>
+    </div>
+    <ol class="steps">
+      <li><span class="n">1</span><span>Customer texts your number<small>No app to download</small></span></li>
+      <li><span class="n">2</span><span>Picks from your menu<small>Your items, your prices</small></span></li>
+      <li><span class="n">3</span><span>Pickup or delivery<small>Name and address collected</small></span></li>
+      <li><span class="n">4</span><span>Order lands on your phone<small>Plus a live screen at the counter</small></span></li>
+    </ol>
+  </div>
+  <div class="foot"><span class="eyebrow">First month free</span><span class="cta">DM “DEMO”</span></div>
+</section>
+
+<!-- 3. "My customers just call" -->
+<section class="card dark objection" id="ordertap-3-just-call">
+  <div class="brand" data-logo>OrderTap</div>
+  <blockquote class="display">My customers just call.</blockquote>
+  <div class="vs">
+    <div class="col phonecall">
+      <h3>Phone orders</h3>
+      <ul><li>Busy line at rush hour</li><li>Misheard orders</li><li>Someone off the grill to answer</li></ul>
+    </div>
+    <div class="col wa">
+      <h3>WhatsApp orders</h3>
+      <ul><li>Never engaged</li><li>Written down, correct</li><li>Arrive while you cook</li></ul>
+    </div>
+  </div>
+  <p class="display closer">Let the orders type themselves.</p>
+  <div class="foot"><span class="eyebrow">Keep the phone for regulars</span><span class="cta">DM “DEMO”</span></div>
+</section>
+
+<!-- 4. Pricing -->
+<section class="card pricing" id="ordertap-4-pricing">
+  <div class="brand" data-logo>OrderTap</div>
+  <h1 class="display">Flat price. Zero commission.</h1>
+  <div class="plans">
+    <div class="plan"><div><h3>Starter</h3><p>Menu up to 30 items · orders page</p></div><div class="price">$29<small>/mo</small></div></div>
+    <div class="plan pop"><div><h3>Standard <span class="tag">POPULAR</span></h3><p>Unlimited menu updates · delivery · owner alerts</p></div><div class="price">$49<small>/mo</small></div></div>
+    <div class="plan"><div><h3>Pro</h3><p>Everything + monthly report + promo help</p></div><div class="price">$99<small>/mo</small></div></div>
+  </div>
+  <p class="fine">$99 setup · <b>first month free</b> · no per-order fees, ever</p>
+  <div class="foot"><span class="eyebrow">Demo with your own menu</span><span class="cta">DM “DEMO”</span></div>
+</section>
+
+<!-- 5. Local call-out -->
+<section class="card dark local" id="ordertap-5-local">
+  <div class="brand" data-logo>OrderTap</div>
+  <h1 class="display">Takeaways, cafés &amp; home cooks: <span>30 days free.</span></h1>
+  <p class="sub">We’re setting up 5 local food businesses with WhatsApp ordering this month. No commission, no app, no lock-in.</p>
+  <div class="spots"><div class="spot">1</div><div class="spot">2</div><div class="spot">3</div><div class="spot">4</div><div class="spot">5</div></div>
+  <p class="spots-label">5 spots this month</p>
+  <div class="foot"><span class="eyebrow">Australia-wide</span><span class="cta">DM to claim one</span></div>
+</section>
+
+<!-- Profile picture -->
+<section class="avatar" id="ordertap-avatar" data-logo-only></section>
+
+<script>
+  const logo = document.getElementById("logo").content;
+  for (const el of document.querySelectorAll("[data-logo]")) el.prepend(logo.cloneNode(true));
+  document.getElementById("ordertap-avatar").append(logo.cloneNode(true));
+</script>
+</body>
+</html>
