@@ -1,2 +1,5 @@
 dist/
 node_modules/
+alert-bot/state.json
+whatsapp-orders/businesses.json
+whatsapp-orders/orders/

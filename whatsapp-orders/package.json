@@ -1,0 +1,12 @@
+{
+  "name": "ordertap",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "OrderTap: WhatsApp ordering bot for local shops and restaurants, multi-business with monthly billing",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "test": "node --test",
+    "start": "node index.js"
+  }
+}
