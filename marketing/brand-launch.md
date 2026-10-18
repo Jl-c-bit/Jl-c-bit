@@ -30,6 +30,8 @@ Avoid putting "MEXC" in the brand name, because it's their trademark. Saying "al
 
 ## ListingRadar: week 1 (X + Telegram channel, TikTok scripts on days 2, 5)
 
+Images for Days 1, 3, 4 and 6 (plus a profile picture) are in `listingradar-site/social/`. See `marketing/listingradar-images/README.md`.
+
 Square brackets are fill-ins. Use **real** alerts from the bot, never invented numbers.
 
 **Day 1 (launch)**

@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>ListingRadar social cards</title>
+<style>
+  :root {
+    --night: #070d1c;
+    --navy: #0e1a33;
+    --panel: #14223f;
+    --line: #23365e;
+    --cyan: #39e1ff;
+    --lime: #b6ff4d;
+    --red: #ff5a6e;
+    --text: #eef3ff;
+    --muted: #8b9cc0;
+    --tg-bot: #1d2b4a;
+    --tg-me: #2b5278;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #444; font-family: "Inter", sans-serif; }
+  .card {
+    width: 1080px; height: 1350px; position: relative; overflow: hidden;
+    padding: 96px 88px; display: flex; flex-direction: column;
+    background: radial-gradient(circle at 85% 8%, #13305a 0, transparent 46%), var(--night);
+    color: var(--text); margin-bottom: 40px;
+  }
+  /* Faint radar rings behind every card */
+  .card::before {
+    content: ""; position: absolute; right: -260px; top: -260px; width: 820px; height: 820px; border-radius: 50%;
+    background: repeating-radial-gradient(circle, transparent 0 78px, #39e1ff14 78px 80px);
+    pointer-events: none;
+  }
+  .card > * { position: relative; }
+  .display { font-family: "Inter Display", "Inter", sans-serif; font-weight: 800; letter-spacing: -0.03em; line-height: 0.98; }
+  .brand { display: flex; align-items: center; gap: 18px; font: 700 36px "Inter Display", sans-serif; letter-spacing: -0.02em; }
+  .brand svg { width: 64px; height: 64px; }
+  .foot { margin-top: auto; display: flex; justify-content: space-between; align-items: center; gap: 32px; }
+  .cta { white-space: nowrap; flex: none; background: var(--cyan); color: var(--night); font: 800 36px "Inter Display", sans-serif; padding: 24px 38px; border-radius: 999px; }
+  .note { font: 600 26px Inter, sans-serif; color: var(--muted); letter-spacing: 0.02em; }
+  h1 em { font-style: normal; color: var(--cyan); }
+
+  /* Telegram-style chat */
+  .chat { background: #0b1527; border: 2px solid var(--line); border-radius: 40px; padding: 36px 32px; display: flex; flex-direction: column; gap: 18px; font: 500 30px/1.35 Inter, sans-serif; }
+  .chat .who { display: flex; align-items: center; gap: 14px; font: 700 28px Inter, sans-serif; padding-bottom: 14px; border-bottom: 2px solid var(--line); margin-bottom: 6px; }
+  .chat .who svg { width: 44px; height: 44px; }
+  .chat .who small { display: block; font-weight: 500; font-size: 22px; color: var(--muted); }
+  .msg { padding: 18px 24px; border-radius: 26px; max-width: 86%; }
+  .msg.bot { background: var(--tg-bot); align-self: flex-start; border-bottom-left-radius: 8px; }
+  .msg.me { background: var(--tg-me); align-self: flex-end; border-bottom-right-radius: 8px; font-family: "DejaVu Sans Mono", monospace; font-size: 28px; }
+  .msg .link { color: var(--cyan); }
+  .msg .dim { color: var(--muted); font-size: 24px; }
+  .tag { display: inline-block; font: 700 24px Inter, sans-serif; letter-spacing: 0.1em; text-transform: uppercase; color: var(--lime); margin-bottom: 18px; }
+
+  /* 1. Launch */
+  .launch h1 { font-size: 96px; margin: 56px 0 48px; }
+  .launch .chat, .howto .chat { font-size: 34px; gap: 20px; padding: 36px 34px; }
+  .launch .msg.me, .howto .msg.me { font-size: 34px; }
+  .pills { display: flex; gap: 18px; margin-top: 36px; }
+  .pill { flex: 1; text-align: center; border: 2px solid var(--line); border-radius: 999px; padding: 22px 10px; font: 700 30px Inter, sans-serif; color: var(--cyan); }
+
+  /* 2. How-to */
+  .howto h1 { font-size: 104px; margin: 64px 0 56px; }
+  
+
+  /* 3. Honesty */
+  .honest h1 { font-size: 112px; margin: 72px 0 56px; }
+  .honest h1 span { color: var(--muted); }
+  .facts { display: flex; flex-direction: column; gap: 22px; }
+  .fact { display: flex; gap: 22px; align-items: center; background: var(--panel); border: 2px solid var(--line); border-radius: 28px; padding: 28px 34px; font: 600 36px/1.25 Inter, sans-serif; }
+  .fact b { flex: none; width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; font: 800 30px Inter, sans-serif; }
+  .fact.yes b { background: #b6ff4d22; color: var(--lime); }
+  .fact.no b { background: #ff5a6e22; color: var(--red); }
+
+  /* 4. Pro */
+  .pro h1 { font-size: 132px; margin: 72px 0 64px; }
+  table { width: 100%; border-collapse: separate; border-spacing: 0; font: 600 38px Inter, sans-serif; background: var(--panel); border: 2px solid var(--line); border-radius: 32px; overflow: hidden; }
+  th, td { padding: 42px 34px; text-align: center; border-bottom: 2px solid var(--line); }
+  tr:last-child td { border-bottom: none; }
+  th { font: 800 34px "Inter Display", sans-serif; color: var(--muted); }
+  th.pro-col { color: var(--night); background: var(--cyan); }
+  td:first-child, th:first-child { text-align: left; }
+  td.pro-col { background: #39e1ff12; color: var(--cyan); font-weight: 800; }
+  .x { color: var(--red); } .ok { color: var(--lime); }
+  .price { margin-top: 56px; font: 700 42px Inter, sans-serif; }
+  .price b { color: var(--cyan); }
+
+  /* Avatar */
+  .avatar { width: 1080px; height: 1080px; background: var(--night); display: grid; place-items: center; margin-bottom: 40px; }
+  .avatar svg { width: 760px; height: 760px; }
+</style>
+</head>
+<body>
+
+<template id="logo">
+  <svg viewBox="0 0 64 64" aria-hidden="true">
+    <circle cx="32" cy="32" r="30" fill="#0e1a33" stroke="#39e1ff" stroke-width="3"/>
+    <circle cx="32" cy="32" r="19" fill="none" stroke="#39e1ff" stroke-width="2" opacity=".45"/>
+    <circle cx="32" cy="32" r="8.5" fill="none" stroke="#39e1ff" stroke-width="2" opacity=".45"/>
+    <path d="M32 32 L32 3 A29 29 0 0 1 57.1 17.5 Z" fill="#39e1ff" opacity=".35"/>
+    <line x1="32" y1="32" x2="57.1" y2="17.5" stroke="#39e1ff" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="44" cy="15" r="4.5" fill="#b6ff4d"/>
+    <circle cx="32" cy="32" r="3" fill="#39e1ff"/>
+  </svg>
+</template>
+
+<!-- 1. Launch -->
+<section class="card launch" id="listingradar-1-launch">
+  <div class="brand" data-logo>ListingRadar</div>
+  <h1 class="display">New MEXC listings, <em>the moment</em> they go live.</h1>
+  <div class="chat">
+    <div class="who" data-logo-sm><span>ListingRadar<small>bot</small></span></div>
+    <span class="tag">Example alert</span>
+    <div class="msg bot">🆕 New on MEXC: <b>NEWCOINUSDT</b><br><span class="link">mexc.com/exchange/NEWCOIN_USDT</span><br><span class="dim">Not financial advice. New listings are very volatile.</span></div>
+  </div>
+  <div class="pills"><span class="pill">Every new pair</span><span class="pill">Instant</span><span class="pill">Free</span></div>
+  <div class="foot"><span class="note">Free · Telegram · not financial advice</span><span class="cta">Join free</span></div>
+</section>
+
+<!-- 2. How-to -->
+<section class="card howto" id="listingradar-2-price-alert">
+  <div class="brand" data-logo>ListingRadar</div>
+  <h1 class="display">Set a price alert in <em>5 seconds.</em></h1>
+  <div class="chat">
+    <div class="who" data-logo-sm><span>ListingRadar<small>bot</small></span></div>
+    <div class="msg me">/alert BTC 70000</div>
+    <div class="msg bot">✅ I'll tell you when BTCUSDT reaches 70,000.</div>
+    <div class="msg bot">🎯 BTCUSDT hit 70,000 <span class="dim">(now 70,012)</span><br><span class="link">mexc.com/exchange/BTC_USDT</span></div>
+  </div>
+  <div class="foot"><span class="note">No app. No charts to stare at.</span><span class="cta">Try it free</span></div>
+</section>
+
+<!-- 3. Honesty -->
+<section class="card honest" id="listingradar-3-facts-not-tips">
+  <div class="brand" data-logo>ListingRadar</div>
+  <h1 class="display">We tell you <em>what’s</em> happening. <span>Not what to buy.</span></h1>
+  <div class="facts">
+    <div class="fact yes"><b>✓</b>New listings, as they go live</div>
+    <div class="fact yes"><b>✓</b>Your price targets, when they hit</div>
+    <div class="fact no"><b>✕</b>No “signals” or buy calls</div>
+    <div class="fact no"><b>✕</b>No guaranteed returns, ever</div>
+  </div>
+  <div class="foot"><span class="note">New listings swing hard both ways.</span><span class="cta">Facts, fast</span></div>
+</section>
+
+<!-- 4. Pro -->
+<section class="card pro" id="listingradar-4-pro">
+  <div class="brand" data-logo>ListingRadar</div>
+  <h1 class="display">Go <em>Pro</em> ⭐</h1>
+  <table>
+    <tr><th></th><th>Free</th><th class="pro-col">Pro</th></tr>
+    <tr><td>New-listing alerts</td><td class="ok">✓</td><td class="pro-col">✓</td></tr>
+    <tr><td>Price alerts</td><td>2</td><td class="pro-col">50</td></tr>
+    <tr><td>10%+ moves in 15 min</td><td class="x">✕</td><td class="pro-col">✓</td></tr>
+  </table>
+  <p class="price">Pay with <b>Telegram Stars</b> · 30 days at a time</p>
+  <div class="foot"><span class="note">Send /upgrade to the bot</span><span class="cta">/upgrade</span></div>
+</section>
+
+<!-- Profile picture -->
+<section class="avatar" id="listingradar-avatar"></section>
+
+<script>
+  const logo = document.getElementById("logo").content;
+  for (const el of document.querySelectorAll("[data-logo], [data-logo-sm]")) el.prepend(logo.cloneNode(true));
+  document.getElementById("listingradar-avatar").append(logo.cloneNode(true));
+</script>
+</body>
+</html>
