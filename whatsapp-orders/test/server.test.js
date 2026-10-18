@@ -87,8 +87,14 @@ test("order flow saves order, notifies owner, shows on dashboard", async () => {
     assert.equal(saved.length, 1);
     assert.equal(saved[0].total, 2000);
 
+    // After a deletion, the next order number still moves forward.
+    fs.writeFileSync(path.join(ordersDir, "diner.jsonl"), JSON.stringify({ ...saved[0], number: 5 }) + "\n");
+    for (const text of ["1", "done", "Lee", "yes"]) await send(base, "15551112222", text);
+    assert.match(sent.filter((m) => m.to === "15550000000").at(-1).body, /New order #6/);
+
     const page = await (await fetch(`${base}/orders/diner?key=secret`)).text();
-    assert.match(page, /#1 · Pat &lt;b&gt; · \$20\.00/);
+    assert.match(page, /#5 · Pat &lt;b&gt; · \$20\.00/);
+    assert.match(page, /#6 · Lee/);
     assert.equal((await fetch(`${base}/orders/diner?key=wrong`)).status, 404);
   });
 });

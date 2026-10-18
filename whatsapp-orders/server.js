@@ -73,7 +73,9 @@ export function createApp({ businesses, sendText, ordersDir, appSecret, verifyTo
     for (const r of result.replies) await sendText(business, from, r);
 
     if (result.order) {
-      const order = { ...result.order, number: readOrders(business).length + 1, customer: from, at: now().toISOString() };
+      // Numbers continue from the last order, so deleted orders (admin.js forget) don't cause repeats.
+      const last = readOrders(business).at(-1);
+      const order = { ...result.order, number: (last?.number || 0) + 1, customer: from, at: now().toISOString() };
       fs.appendFileSync(ordersFile(business), JSON.stringify(order) + "\n");
       // WhatsApp only delivers free-form messages within 24h of the owner's last message to this number,
       // so the dashboard is the reliable copy.
