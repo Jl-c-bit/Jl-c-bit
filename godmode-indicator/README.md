@@ -49,7 +49,7 @@ test the indicator outside a steady uptrend. Result: **no consistent edge**.
   drawdown relief: in choppy, mean-reverting markets it sells near lows and buys back higher.
 - Settings re-tuned per ETF on 2003–2016 didn't hold up on 2017–2026 either.
 
-### As a filter on other entries (`backtest/filter_test.py`)
+### As a filter on other entries
 Tested on a 10/40-week MA crossover, a 20/10-week Donchian breakout and a Bollinger dip-buy, on SPY, EEM and XLE.
 - **Entry filter = no effect on trend entries.** At every MA-cross and breakout entry the score was already
   >50, ≥5/7 bullish and not in god-mode bear, so the filter never blocked a trade. It measures the same thing.
@@ -67,7 +67,7 @@ Two new readings that look at things the momentum score doesn't:
   the pane, in the dashboard, and as alerts. Lengths are in weeks and auto-scale ×5 on daily/intraday charts.
 - Optional: *Only allow BUY signals in risk-on regime* (off by default; see below).
 
-Backtest (`backtest/regime_test.py`, weekly, rules fixed in advance):
+Backtest (weekly, rules fixed in advance):
 - Unlike the momentum filters, the regime **does** disagree with trend entries (blocked 2–4 of 12–18 MA entries).
 - It mainly predicts **risk, not direction**. SPY 2003–16: 13-week returns in risk-on weeks varied half as
   much (st. dev. 5.0% vs 11.0%). But in 2017–26, risk-off weeks were followed by *higher* returns on all
@@ -75,7 +75,7 @@ Backtest (`backtest/regime_test.py`, weekly, rules fixed in advance):
 - Holding only in risk-on cut the worst drawdown everywhere (SPY -56%→-19%, EEM -64%→-35%, XLE -56%→-35%
   in 2003–16) but gave up return everywhere except EEM 2003–16, and badly on XLE 2017–26 (+4% vs +76%).
 
-### Position sizing by regime (`backtest/sizing_test.py`)
+### Position sizing by regime
 Exposure 100% in risk-on, 50% in risk-off, vs. a **fixed** exposure with the same average (~84%) — the fair
 comparison, because owning less always means smaller swings.
 
@@ -95,6 +95,9 @@ comparison, because owning less always means smaller swings.
 
 Treat it as a dashboard of momentum conditions, not a standalone trading system.
 
-Re-run: save Alpha Vantage `TIME_SERIES_WEEKLY` CSV for SPY as `backtest/spy_weekly.csv`, then
-`cd backtest && python3 retune.py spy_weekly.csv` (same for `eem_weekly.csv`, `xle_weekly.csv`); `regime_test.py` and `sizing_test.py` also need the 9 sector ETF CSVs (`xlb_weekly.csv` … `xly_weekly.csv`) (needs pandas).
+## Full backtest report
+All tests live in one script, `backtest/report.py`, which writes **[`backtest/REPORT.md`](backtest/REPORT.md)**.
+To re-run: save Alpha Vantage `TIME_SERIES_WEEKLY` CSVs (csv format) into `backtest/` as `spy_weekly.csv`,
+`eem_weekly.csv`, `xle_weekly.csv` and the 9 sector ETFs `xlb_weekly.csv` … `xly_weekly.csv`, then
+`cd backtest && python3 report.py` (needs pandas and numpy).
 Share splits are back-adjusted automatically; dividends are not included.
