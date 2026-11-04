@@ -39,6 +39,18 @@ What the test showed (13-week forward returns vs. holding SPY any week):
   cut the worst drawdown from -32% to -25% in 2017–2026, for ~3 points less total return (+223% vs +232%).
   In 2003–2016 it cut the drawdown from -56% to -39% but gave up more return (+82% vs +121%).
 
+### Cross-check on EEM and XLE (same SPY weekly preset, no re-tuning)
+EEM (emerging markets) and XLE (energy) spent long stretches going nowhere or crashing, so they
+test the indicator outside a steady uptrend. Result: **no consistent edge**.
+- God-mode bull starts ≈ buying any random week on all three ETFs.
+- SELL / god-mode bear signals were right less than half the time on all three.
+- The "sit in cash during god-mode bear" filter helped on SPY and on EEM 2007–2016, but hurt on
+  EEM 2017–2026 (+46% vs +70%) and badly on XLE (+57% vs +207%; +25% vs +76%) with little
+  drawdown relief: in choppy, mean-reverting markets it sells near lows and buys back higher.
+- Settings re-tuned per ETF on 2003–2016 didn't hold up on 2017–2026 either.
+
+Treat it as a dashboard of momentum conditions, not a standalone trading system.
+
 Re-run: save Alpha Vantage `TIME_SERIES_WEEKLY` CSV for SPY as `backtest/spy_weekly.csv`, then
-`cd backtest && python3 godmode_bt.py spy_weekly.csv && python3 retune.py` (needs pandas).
-Prices are not dividend-adjusted.
+`cd backtest && python3 retune.py spy_weekly.csv` (same for `eem_weekly.csv`, `xle_weekly.csv`) (needs pandas).
+Share splits are back-adjusted automatically; dividends are not included.

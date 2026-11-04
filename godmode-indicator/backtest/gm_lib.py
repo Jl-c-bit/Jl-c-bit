@@ -1,5 +1,17 @@
 import sys, numpy as np, pandas as pd
-df = pd.read_csv('spy_weekly.csv', parse_dates=['timestamp']).sort_values('timestamp').reset_index(drop=True)
+df = pd.read_csv((sys.argv[1] if len(sys.argv)>1 else 'spy_weekly.csv'), parse_dates=['timestamp']).sort_values('timestamp').reset_index(drop=True)
+# Back-adjust share splits (free Alpha Vantage weekly data is unadjusted):
+# a week whose close is ~2x/3x/4x below the previous close is treated as a split.
+for i in range(1, len(df)):
+    ratio = df.close[i-1] / df.close[i]
+    k = round(ratio)
+    if k >= 2 and abs(ratio - k) / k < 0.08:
+        for col in ('open', 'high', 'low', 'close'):
+            df.loc[:i-1, col] /= k
+        df.loc[:i-1, 'volume'] *= k
+        for col in ('open', 'high'):              # split week mixes pre/post prices
+            if df.loc[i, col] > df.close[i] * 1.5: df.loc[i, col] /= k
+        print(f"[split-adjusted {k}:1 at {df.timestamp[i].date()}]")
 o,h,l,c,v = df.open,df.high,df.low,df.close,df.volume
 def ema(x,n):
     x=pd.Series(x,dtype=float); out=np.full(len(x),np.nan); a=2/(n+1); prev=np.nan; vals=x.values; buf=[]
