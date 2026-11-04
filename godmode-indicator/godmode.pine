@@ -6,6 +6,7 @@
 indicator("GodMode Confluence Oscillator", shorttitle = "GodMode", overlay = false, max_lines_count = 500, max_labels_count = 500)
 
 // ───────────────────────────── Inputs ─────────────────────────────
+preset = input.string("Custom (inputs below)", "Preset", options = ["Custom (inputs below)", "Weekly (tuned on SPY)"], tooltip = "Weekly preset: trend EMA 20, oversold 35, overbought 65, zone memory 8 bars, 5 of 7 must agree. Picked on SPY 2003-2016, checked on 2017-2026.")
 grpC = "Components"
 lenRsi   = input.int(14, "RSI length",               minval = 2, group = grpC)
 lenMfi   = input.int(14, "MFI length",               minval = 2, group = grpC)
@@ -46,6 +47,14 @@ grpV = "Display"
 showOnChart = input.bool(true, "Show signals on the price chart", group = grpV)
 showTable   = input.bool(true, "Show dashboard",                  group = grpV)
 showBg      = input.bool(true, "Shade god-mode alignment",        group = grpV)
+
+// Effective settings (preset overrides the matching inputs)
+isWeekly = preset == "Weekly (tuned on SPY)"
+trendLenE = isWeekly ? 20 : trendLen
+osLevelE  = isWeekly ? 35.0 : osLevel
+obLevelE  = isWeekly ? 65.0 : obLevel
+zoneMemoE = isWeekly ? 8 : zoneMemo
+minAgreeE = isWeekly ? 5 : minAgree
 
 // ───────────────────────────── Colors ─────────────────────────────
 cBull = #00e676
@@ -88,7 +97,7 @@ bearCount = (cRsi < 50 ? 1 : 0) + (cMfi < 50 ? 1 : 0) + (cSto < 50 ? 1 : 0) + (c
 htfScore = request.security(syminfo.tickerid, htf, f_scorePrev(), lookahead = barmerge.lookahead_on)
 
 // Filters
-trendEma = ta.ema(close, trendLen)
+trendEma = ta.ema(close, trendLenE)
 [diPlus, diMinus, adx] = ta.dmi(adxLen, adxLen)
 adxOk     = not useAdx or adx >= adxMin
 upTrendOk = not useTrend or close > trendEma
@@ -99,17 +108,17 @@ bullOk = upTrendOk and adxOk and htfBullOk
 bearOk = dnTrendOk and adxOk and htfBearOk
 
 // God-mode alignment: most components agree AND score has momentum
-godBull = bullCount >= minAgree and score > 50 and score > signal and bullOk
-godBear = bearCount >= minAgree and score < 50 and score < signal and bearOk
+godBull = bullCount >= minAgreeE and score > 50 and score > signal and bullOk
+godBear = bearCount >= minAgreeE and score < 50 and score < signal and bearOk
 
 // Reversal signals: score crosses its signal line after visiting a zone
 crossUp = ta.crossover(score, signal)
 crossDn = ta.crossunder(score, signal)
-recentLow  = ta.lowest(score, zoneMemo)
-recentHigh = ta.highest(score, zoneMemo)
+recentLow  = ta.lowest(score, zoneMemoE)
+recentHigh = ta.highest(score, zoneMemoE)
 
-buy        = barstate.isconfirmed and crossUp and recentLow  <= osLevel and bullOk
-sell       = barstate.isconfirmed and crossDn and recentHigh >= obLevel and bearOk
+buy        = barstate.isconfirmed and crossUp and recentLow  <= osLevelE and bullOk
+sell       = barstate.isconfirmed and crossDn and recentHigh >= obLevelE and bearOk
 strongBuy  = buy  and recentLow  <= extOs
 strongSell = sell and recentHigh >= extOb
 godBullOn  = barstate.isconfirmed and godBull and not godBull[1]
@@ -140,9 +149,9 @@ if bearDiv
 
 // ───────────────────────────── Plots (pane) ───────────────────────
 hExOb = hline(extOb,   "Extreme overbought", color = color.new(cBear, 60), linestyle = hline.style_dotted)
-hOb   = hline(obLevel, "Overbought",         color = color.new(cBear, 40), linestyle = hline.style_dashed)
+hOb   = hline(obLevelE, "Overbought",         color = color.new(cBear, 40), linestyle = hline.style_dashed)
 hline(50,              "Midline",            color = color.new(cMute, 50), linestyle = hline.style_dotted)
-hOs   = hline(osLevel, "Oversold",           color = color.new(cBull, 40), linestyle = hline.style_dashed)
+hOs   = hline(osLevelE, "Oversold",           color = color.new(cBull, 40), linestyle = hline.style_dashed)
 hExOs = hline(extOs,   "Extreme oversold",   color = color.new(cBull, 60), linestyle = hline.style_dotted)
 fill(hOb, hExOb, color = color.new(cBear, 90))
 fill(hOs, hExOs, color = color.new(cBull, 90))
@@ -182,7 +191,7 @@ putRow(int r, string txt, string val, color col) =>
     table.cell(dash, 1, r, val, text_color = col,   text_size = size.small, text_halign = text.align_right)
 
 if showTable and barstate.islast
-    state    = godBull ? "GOD MODE ▲" : godBear ? "GOD MODE ▼" : score >= obLevel ? "Overbought" : score <= osLevel ? "Oversold" : score > signal ? "Rising" : "Falling"
+    state    = godBull ? "GOD MODE ▲" : godBear ? "GOD MODE ▼" : score >= obLevelE ? "Overbought" : score <= osLevelE ? "Oversold" : score > signal ? "Rising" : "Falling"
     stateCol = godBull or godBear ? cGold : score > signal ? cBull : cBear
     putRow(0,  "State",        state, stateCol)
     putRow(1,  "Score",        str.tostring(score, "#.0"), valCol(score))

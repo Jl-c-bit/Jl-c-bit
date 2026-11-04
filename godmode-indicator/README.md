@@ -26,3 +26,19 @@ Signals confirm on bar close, and the higher-timeframe filter uses the last
 - Lower *components that must agree* (default 6) to get more god-mode alignments.
 
 Not financial advice. Backtest on your own markets before trading real money.
+
+## Weekly preset & backtest (SPY, Alpha Vantage weekly data)
+Pick **Preset → Weekly (tuned on SPY)** on weekly charts: trend EMA 20, oversold 35,
+overbought 65, zone memory 8 bars, 5 of 7 must agree. Settings were chosen on
+2003–2016 only and checked on 2017–2026 (data the tuning never saw).
+
+What the test showed (13-week forward returns vs. holding SPY any week):
+- Buy-side signals roughly match buy-and-hold: no real edge. BUY signals look strong but fired only 8 times in 23 years.
+- Sell signals do **not** work as shorts on SPY (it mostly went up).
+- Most useful as a **risk filter**: holding SPY but sitting in cash while god-mode BEAR is active
+  cut the worst drawdown from -32% to -25% in 2017–2026, for ~3 points less total return (+223% vs +232%).
+  In 2003–2016 it cut the drawdown from -56% to -39% but gave up more return (+82% vs +121%).
+
+Re-run: save Alpha Vantage `TIME_SERIES_WEEKLY` CSV for SPY as `backtest/spy_weekly.csv`, then
+`cd backtest && python3 godmode_bt.py spy_weekly.csv && python3 retune.py` (needs pandas).
+Prices are not dividend-adjusted.
