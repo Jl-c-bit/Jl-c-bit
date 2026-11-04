@@ -43,6 +43,20 @@ pivL    = input.int(5,  "Pivot lookback left",  minval = 1, group = grpD)
 pivR    = input.int(5,  "Pivot lookback right", minval = 1, group = grpD)
 divMax  = input.int(60, "Max bars between pivots", minval = 5, group = grpD)
 
+grpR = "Market regime (volatility + breadth)"
+showRegime = input.bool(true,  "Show regime strip & dashboard rows", group = grpR)
+gateRegime = input.bool(false, "Only allow BUY signals in risk-on regime", group = grpR, tooltip = "Off by default: in testing the regime mainly predicted how bumpy returns were, not their direction.")
+autoScale  = input.bool(true,  "Auto-scale lengths on daily & intraday charts (x5)", group = grpR, tooltip = "Lengths below are in weeks (the tested values). On daily and intraday charts they are multiplied by 5 so 40 weeks becomes 200 bars.")
+volSrc  = input.string("Realized (this chart)", "Volatility source", options = ["Realized (this chart)", "Volatility index symbol"], group = grpR)
+volSym  = input.symbol("TVC:VIX", "Volatility index symbol", group = grpR)
+volLen  = input.int(13,  "Realized volatility length", minval = 2,  group = grpR)
+volLook = input.int(156, "Volatility percentile lookback", minval = 20, group = grpR)
+volMax  = input.float(80, "High volatility above percentile", minval = 1, maxval = 99, group = grpR)
+brSrc   = input.string("Sector ETFs (9 SPDRs)", "Breadth source", options = ["Sector ETFs (9 SPDRs)", "Percent symbol", "Off"], group = grpR)
+brSym   = input.symbol("INDEX:S5TH", "Breadth percent symbol (0-100)", group = grpR, tooltip = "e.g. INDEX:S5TH (% of S&P 500 above 200-day MA) or INDEX:S5FI (above 50-day)")
+brLen   = input.int(40, "Sector trend SMA length", minval = 2, group = grpR)
+brMin   = input.float(50, "Healthy breadth: at least % above trend", minval = 1, maxval = 99, group = grpR)
+
 grpV = "Display"
 showOnChart = input.bool(true, "Show signals on the price chart", group = grpV)
 showTable   = input.bool(true, "Show dashboard",                  group = grpV)
@@ -55,6 +69,11 @@ osLevelE  = isWeekly ? 35.0 : osLevel
 obLevelE  = isWeekly ? 65.0 : obLevel
 zoneMemoE = isWeekly ? 8 : zoneMemo
 minAgreeE = isWeekly ? 5 : minAgree
+
+scaleK   = autoScale and (timeframe.isdaily or timeframe.isintraday) ? 5 : 1
+volLenE  = volLen * scaleK
+volLookE = volLook * scaleK
+brLenE   = brLen * scaleK
 
 // ───────────────────────────── Colors ─────────────────────────────
 cBull = #00e676
@@ -84,6 +103,44 @@ f_scorePrev() =>
     [a, b, c, d, e, f, g] = f_components()
     s = ta.ema((a + b + c + d + e + f + g) / 7, smoothLen)
     s[1]
+
+// 1 if this symbol closes above its trend SMA, else 0
+f_above(int len) =>
+    close > ta.sma(close, len) ? 1.0 : 0.0
+
+// Average of the non-missing values, as a percent
+f_pct(array<float> a) =>
+    float sum = 0.0
+    int n = 0
+    for x in a
+        if not na(x)
+            sum += x
+            n += 1
+    n > 0 ? sum / n * 100 : na
+
+// ───────────────────────────── Market regime ──────────────────────
+logRet   = math.log(close / close[1])
+realVol  = ta.stdev(logRet, volLenE) * 100
+vixClose = request.security(volSym, timeframe.period, close, ignore_invalid_symbol = true)
+volVal   = volSrc == "Realized (this chart)" ? realVol : vixClose
+volPct   = ta.percentrank(volVal, volLookE)
+
+sXLB = request.security("AMEX:XLB", timeframe.period, f_above(brLenE), ignore_invalid_symbol = true)
+sXLE = request.security("AMEX:XLE", timeframe.period, f_above(brLenE), ignore_invalid_symbol = true)
+sXLF = request.security("AMEX:XLF", timeframe.period, f_above(brLenE), ignore_invalid_symbol = true)
+sXLI = request.security("AMEX:XLI", timeframe.period, f_above(brLenE), ignore_invalid_symbol = true)
+sXLK = request.security("AMEX:XLK", timeframe.period, f_above(brLenE), ignore_invalid_symbol = true)
+sXLP = request.security("AMEX:XLP", timeframe.period, f_above(brLenE), ignore_invalid_symbol = true)
+sXLU = request.security("AMEX:XLU", timeframe.period, f_above(brLenE), ignore_invalid_symbol = true)
+sXLV = request.security("AMEX:XLV", timeframe.period, f_above(brLenE), ignore_invalid_symbol = true)
+sXLY = request.security("AMEX:XLY", timeframe.period, f_above(brLenE), ignore_invalid_symbol = true)
+sectorBreadth = f_pct(array.from(sXLB, sXLE, sXLF, sXLI, sXLK, sXLP, sXLU, sXLV, sXLY))
+symBreadth    = request.security(brSym, timeframe.period, close, ignore_invalid_symbol = true)
+breadth = brSrc == "Off" ? na : brSrc == "Sector ETFs (9 SPDRs)" ? sectorBreadth : symBreadth
+
+volHigh = volPct > volMax
+brWeak  = brSrc != "Off" and not (breadth >= brMin)
+riskOn  = not volHigh and not brWeak
 
 // ───────────────────────────── Core ───────────────────────────────
 [cRsi, cMfi, cSto, cCci, cWpr, cTsi, cTrd] = f_components()
@@ -117,7 +174,7 @@ crossDn = ta.crossunder(score, signal)
 recentLow  = ta.lowest(score, zoneMemoE)
 recentHigh = ta.highest(score, zoneMemoE)
 
-buy        = barstate.isconfirmed and crossUp and recentLow  <= osLevelE and bullOk
+buy        = barstate.isconfirmed and crossUp and recentLow  <= osLevelE and bullOk and (not gateRegime or riskOn)
 sell       = barstate.isconfirmed and crossDn and recentHigh >= obLevelE and bearOk
 strongBuy  = buy  and recentLow  <= extOs
 strongSell = sell and recentHigh >= extOb
@@ -162,6 +219,7 @@ pSig   = plot(signal, "Signal",        color = color.new(cMute, 20))
 fill(pScore, pSig, color = score > signal ? color.new(cBull, 80) : color.new(cBear, 80))
 plot(useHtf ? htfScore : na, "HTF score", color = color.new(#40c4ff, 30), style = plot.style_stepline)
 
+plot(showRegime ? 104 : na, "Regime strip (green = risk-on)", color = riskOn ? color.new(cBull, 20) : color.new(cBear, 0), linewidth = 4, style = plot.style_linebr)
 bgcolor(showBg and godBull ? color.new(cBull, 88) : showBg and godBear ? color.new(cBear, 88) : na, title = "God-mode shading")
 
 plotshape(buy and not strongBuy,  "Buy",         shape.triangleup,   location.bottom, cBull, size = size.tiny)
@@ -181,7 +239,7 @@ plotshape(showOnChart and godBearOn, "Chart god-mode bear", shape.diamond, locat
 plot(useTrend and showOnChart ? trendEma : na, "Trend EMA", color = color.new(cMute, 30), force_overlay = true)
 
 // ───────────────────────────── Dashboard ──────────────────────────
-var table dash = table.new(position.top_right, 2, 12, bgcolor = color.new(#0b0f14, 5), frame_color = color.new(cMute, 60), frame_width = 1, border_color = color.new(cMute, 85), border_width = 1)
+var table dash = table.new(position.top_right, 2, 15, bgcolor = color.new(#0b0f14, 5), frame_color = color.new(cMute, 60), frame_width = 1, border_color = color.new(cMute, 85), border_width = 1)
 
 valCol(float v) =>
     v >= 50 ? cBull : cBear
@@ -205,6 +263,10 @@ if showTable and barstate.islast
     putRow(9,  "Trend chan.",  str.tostring(cTrd, "#.0"), valCol(cTrd))
     putRow(10, "Trend / ADX",  (close > trendEma ? "Up" : "Down") + " / " + str.tostring(adx, "#"), close > trendEma ? cBull : cBear)
     putRow(11, "HTF score",    useHtf ? str.tostring(htfScore, "#.0") : "off", useHtf ? valCol(htfScore) : cMute)
+    if showRegime
+        putRow(12, "Volatility",   na(volPct) ? "n/a" : str.tostring(volPct, "#") + " pct" + (volHigh ? " HIGH" : ""), volHigh ? cBear : cBull)
+        putRow(13, "Breadth",      brSrc == "Off" ? "off" : na(breadth) ? "n/a" : str.tostring(breadth, "#") + "% above", brWeak ? cBear : cBull)
+        putRow(14, "Regime",       riskOn ? "RISK-ON" : "RISK-OFF", riskOn ? cBull : cBear)
 
 // ───────────────────────────── Alerts ─────────────────────────────
 alertcondition(buy,        "GodMode Buy",               "GodMode BUY on {{ticker}} ({{interval}}) @ {{close}}")
@@ -215,3 +277,7 @@ alertcondition(godBullOn,  "God-mode bull alignment",   "God-mode BULL alignment
 alertcondition(godBearOn,  "God-mode bear alignment",   "God-mode BEAR alignment started on {{ticker}} ({{interval}})")
 alertcondition(bullDiv,    "GodMode bullish divergence", "Bullish divergence on {{ticker}} ({{interval}})")
 alertcondition(bearDiv,    "GodMode bearish divergence", "Bearish divergence on {{ticker}} ({{interval}})")
+regimeOff = barstate.isconfirmed and not riskOn and riskOn[1]
+regimeOn  = barstate.isconfirmed and riskOn and not riskOn[1]
+alertcondition(regimeOff,  "Regime turned risk-off",    "Regime RISK-OFF on {{ticker}} ({{interval}}): high volatility or weak breadth")
+alertcondition(regimeOn,   "Regime turned risk-on",     "Regime RISK-ON on {{ticker}} ({{interval}})")

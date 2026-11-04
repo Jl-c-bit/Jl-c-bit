@@ -57,8 +57,27 @@ Tested on a 10/40-week MA crossover, a 20/10-week Donchian breakout and a Bollin
 - **Early exit on god-mode bear:** helped the MA system in 2 of 6 cases (SPY and EEM 2017–26), hurt in 4
   (badly on XLE). Inconsistent.
 
+## Market regime: volatility + breadth
+Two new readings that look at things the momentum score doesn't:
+- **Volatility**: how jumpy the last 13 bars were vs. the last 156 (percentile). Above 80 = HIGH.
+  Source: this chart's own price, or a volatility index such as `TVC:VIX`.
+- **Breadth**: % of the 9 original sector SPDRs (XLB XLE XLF XLI XLK XLP XLU XLV XLY) above their
+  40-bar average, or any 0–100 breadth symbol such as `INDEX:S5TH`. Below 50% = weak.
+- **Regime** = RISK-ON when volatility isn't high and breadth isn't weak. Shown as a strip at the top of
+  the pane, in the dashboard, and as alerts. Lengths are in weeks and auto-scale ×5 on daily/intraday charts.
+- Optional: *Only allow BUY signals in risk-on regime* (off by default; see below).
+
+Backtest (`backtest/regime_test.py`, weekly, rules fixed in advance):
+- Unlike the momentum filters, the regime **does** disagree with trend entries (blocked 2–4 of 12–18 MA entries).
+- It mainly predicts **risk, not direction**. SPY 2003–16: 13-week returns in risk-on weeks varied half as
+  much (st. dev. 5.0% vs 11.0%). But in 2017–26, risk-off weeks were followed by *higher* returns on all
+  three ETFs (rebounds after sell-offs).
+- Holding only in risk-on cut the worst drawdown everywhere (SPY -56%→-19%, EEM -64%→-35%, XLE -56%→-35%
+  in 2003–16) but gave up return everywhere except EEM 2003–16, and badly on XLE 2017–26 (+4% vs +76%).
+- Best use: sizing positions down in risk-off, not exiting entirely.
+
 Treat it as a dashboard of momentum conditions, not a standalone trading system.
 
 Re-run: save Alpha Vantage `TIME_SERIES_WEEKLY` CSV for SPY as `backtest/spy_weekly.csv`, then
-`cd backtest && python3 retune.py spy_weekly.csv` (same for `eem_weekly.csv`, `xle_weekly.csv`) (needs pandas).
+`cd backtest && python3 retune.py spy_weekly.csv` (same for `eem_weekly.csv`, `xle_weekly.csv`); `regime_test.py` also needs the 9 sector ETF CSVs (`xlb_weekly.csv` … `xly_weekly.csv`) (needs pandas).
 Share splits are back-adjusted automatically; dividends are not included.
