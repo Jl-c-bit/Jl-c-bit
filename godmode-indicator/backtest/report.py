@@ -22,6 +22,7 @@ import numpy as np
 import pandas as pd
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+DATA_DIR = HERE                                   # where the *_weekly.csv files are read from
 ETFS = ['spy', 'eem', 'xle']
 SECTORS = ['xlb', 'xle', 'xlf', 'xli', 'xlk', 'xlp', 'xlu', 'xlv', 'xly']
 SPLIT_DATE = '2017-01-01'
@@ -32,9 +33,11 @@ WEEKLY = dict(trend=20, os=35, ob=65, memo=8, agree=5)
 
 
 # ───────────────────────────── Data ─────────────────────────────
-def load(sym, log=None):
-    df = pd.read_csv(os.path.join(HERE, f'{sym}_weekly.csv'), parse_dates=['timestamp'])
+def load(sym, log=None, adjust_splits=True):
+    df = pd.read_csv(os.path.join(DATA_DIR, f'{sym}_weekly.csv'), parse_dates=['timestamp'])
     df = df.sort_values('timestamp').reset_index(drop=True)
+    if not adjust_splits:                         # e.g. crypto, where a 50%+ weekly crash is real
+        return df
     # A week whose close is ~2x/3x/4x below the previous close is treated as a split.
     for i in range(1, len(df)):
         ratio = df.close[i - 1] / df.close[i]
@@ -129,7 +132,8 @@ def breadth_series(dates):
         sm = d.close.rolling(40)
         cols.append(pd.Series((d.close > sm.mean()).where(sm.count() == 40).values, index=d.timestamp))
     wide = pd.concat(cols, axis=1, keys=[s.upper() for s in SECTORS])
-    return pd.Series((wide.mean(axis=1) * 100).reindex(dates).values), wide
+    # Forward-fill so assets whose weeks end on another day (crypto: Sunday) get the latest Friday reading
+    return pd.Series((wide.mean(axis=1) * 100).reindex(pd.DatetimeIndex(dates), method='ffill').values), wide
 
 
 # ───────────────────────────── Helpers ─────────────────────────────
