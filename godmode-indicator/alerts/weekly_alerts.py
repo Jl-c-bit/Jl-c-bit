@@ -1,11 +1,14 @@
 """Weekly GodMode alerts: prints a short phone-friendly message.
 
     python3 weekly_alerts.py DATA_DIR [--today YYYY-MM-DD]
+    python3 weekly_alerts.py --symbols      # list what to fetch
+
+To add or remove a coin, edit CRYPTO below; the weekly run reads the list from --symbols.
 
 DATA_DIR must hold Alpha Vantage weekly CSVs named <symbol>_weekly.csv
 (columns timestamp,open,high,low,close,volume):
     spy eem xle            ETFs (TIME_SERIES_WEEKLY)
-    btc eth                crypto (DIGITAL_CURRENCY_WEEKLY, market USD)
+    btc eth sol xrp bnb doge ada   crypto (DIGITAL_CURRENCY_WEEKLY, market USD)
     xlb xlf xli xlk xlp xlu xlv xly (+ xle)   sector ETFs for breadth
 
 Only completed weeks are used: bars dated in the current week (Mon-Sun) are dropped.
@@ -28,7 +31,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'
 import report  # noqa: E402
 
 ETFS = ['spy', 'eem', 'xle']
-CRYPTO = ['btc', 'eth']
+CRYPTO = ['btc', 'eth', 'sol', 'xrp', 'bnb', 'doge', 'ada']
+BREADTH = ['xlb', 'xle', 'xlf', 'xli', 'xlk', 'xlp', 'xlu', 'xlv', 'xly']
 P = report.WEEKLY
 EXT_OS, EXT_OB = 12, 88                           # extreme zones, as in the Pine script
 
@@ -40,7 +44,13 @@ def completed(df, today):
 
 
 def analyse(sym, today):
+    base = dict(sym=sym.upper(), untested=sym in CRYPTO, alerts=[], week='-', breadth=np.nan)
+    if not os.path.exists(os.path.join(report.DATA_DIR, f'{sym}_weekly.csv')):
+        return dict(base, status='no data this week (fetch failed)')
     df = completed(report.load(sym, adjust_splits=sym not in CRYPTO), today)
+    if len(df) < 60:
+        return dict(base, week=df.timestamp.iloc[-1].date() if len(df) else '-',
+                    status=f'not enough history ({len(df)} weeks)')
     c, dates = df.close, df.timestamp
     ind = report.indicators(df)
     S = report.signals(c, ind, {}, P['trend'], P['os'], P['ob'], P['memo'], P['agree'])
@@ -55,7 +65,10 @@ def analyse(sym, today):
 
     i = len(df) - 1
     alerts = []
-    if on[i] and not on[i - 1]:
+    has_regime = not (np.isnan(volpct[i]) or np.isnan(volpct[i - 1]))  # needs ~3.5 years of history
+    if not has_regime:
+        pass
+    elif on[i] and not on[i - 1]:
         alerts.append("REGIME BUY: turned risk-on, back to 100%")
     elif not on[i] and on[i - 1]:
         alerts.append("REGIME SELL: turned risk-off, cut to 50%")
@@ -63,13 +76,17 @@ def analyse(sym, today):
                        ('GOD SELL', god_sell), ('SELL', S['SELL'] & ~god_sell)):
         if mask[i]:
             alerts.append(f"ARROW {name}")
-    status = (f"{'RISK-ON 100%' if on[i] else 'RISK-OFF 50%'} · score {score[i]:.0f} "
+    regime = ('RISK-ON 100%' if on[i] else 'RISK-OFF 50%') if has_regime else 'regime n/a (short history)'
+    status = (f"{regime} · score {score[i]:.0f} "
               f"{'rising' if score[i] > ind['sig'][i] else 'falling'} · close {c[i]:,.2f}")
-    return dict(sym=sym.upper(), week=dates[i].date(), alerts=alerts, status=status,
-                untested=sym in CRYPTO, breadth=breadth[i], volpct=volpct[i])
+    return dict(base, week=dates[i].date(), alerts=alerts, status=status, breadth=breadth[i])
 
 
 def main():
+    if '--symbols' in sys.argv:
+        print('TIME_SERIES_WEEKLY: ' + ' '.join(s.upper() for s in dict.fromkeys(ETFS + BREADTH)))
+        print('DIGITAL_CURRENCY_WEEKLY (market USD): ' + ' '.join(s.upper() for s in CRYPTO))
+        return
     if len(sys.argv) < 2:
         sys.exit(__doc__)
     report.DATA_DIR = os.path.abspath(sys.argv[1])
@@ -81,13 +98,17 @@ def main():
         head = ' | '.join(f"{r['sym']}: {', '.join(a.split(':')[0] for a in r['alerts'])}" for r in fired)
     else:
         head = 'No new signals this week'
+    missing = [r['sym'] for r in results if r['week'] == '-']
+    if missing:
+        head += f" (no data: {', '.join(missing)})"
     lines = [f"GodMode weekly: {head}", '']
     for r in results:
         tag = ' (crypto, untested)' if r['untested'] else ''
-        lines.append(f"{r['sym']}{tag}, week of {r['week']}")
+        lines.append(f"{r['sym']}{tag}" + (f", week of {r['week']}" if r['week'] != '-' else ''))
         lines += [f"  -> {a}" for a in r['alerts']]
         lines.append(f"  {r['status']}")
-    lines += ['', f"US breadth {results[0]['breadth']:.0f}% of sectors above trend.",
+    br = next((r['breadth'] for r in results if not np.isnan(r['breadth'])), np.nan)
+    lines += ['', f"US breadth {br:.0f}% of sectors above trend." if not np.isnan(br) else "US breadth unavailable.",
               "Regime alerts are the tested part; arrows did no better than chance in testing. Not financial advice."]
     print('\n'.join(lines))
 
