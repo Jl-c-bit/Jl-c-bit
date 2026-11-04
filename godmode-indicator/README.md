@@ -74,7 +74,7 @@ Backtest (`backtest/regime_test.py`, weekly, rules fixed in advance):
   three ETFs (rebounds after sell-offs).
 - Holding only in risk-on cut the worst drawdown everywhere (SPY -56%→-19%, EEM -64%→-35%, XLE -56%→-35%
   in 2003–16) but gave up return everywhere except EEM 2003–16, and badly on XLE 2017–26 (+4% vs +76%).
-- Best use: sizing positions down in risk-off, not exiting entirely.
+- Untested idea: use it to size positions down in risk-off rather than exiting entirely.
 
 Treat it as a dashboard of momentum conditions, not a standalone trading system.
 
