@@ -1,0 +1,208 @@
+//@version=6
+// GodMode Confluence Oscillator
+// Blends 7 independent momentum / trend readings into one 0-100 score,
+// counts how many of them agree, and flags high-confluence entries.
+// Signals are confirmed on bar close (no repaint). Not financial advice.
+indicator("GodMode Confluence Oscillator", shorttitle = "GodMode", overlay = false, max_lines_count = 500, max_labels_count = 500)
+
+// ───────────────────────────── Inputs ─────────────────────────────
+grpC = "Components"
+lenRsi   = input.int(14, "RSI length",               minval = 2, group = grpC)
+lenMfi   = input.int(14, "MFI length",               minval = 2, group = grpC)
+lenStoch = input.int(14, "Stochastic length",        minval = 2, group = grpC)
+smStoch  = input.int(3,  "Stochastic smoothing",     minval = 1, group = grpC)
+lenCci   = input.int(20, "CCI length",               minval = 2, group = grpC)
+lenWpr   = input.int(14, "Williams %R length",       minval = 2, group = grpC)
+tsiShort = input.int(13, "TSI short length",         minval = 1, group = grpC)
+tsiLong  = input.int(25, "TSI long length",          minval = 2, group = grpC)
+lenTrend = input.int(21, "Trend channel EMA length", minval = 2, group = grpC)
+
+grpS = "Smoothing & zones"
+smoothLen = input.int(3, "Score smoothing (EMA)", minval = 1, group = grpS)
+sigLen    = input.int(5, "Signal line length",    minval = 1, group = grpS)
+obLevel   = input.float(75, "Overbought",          group = grpS)
+osLevel   = input.float(25, "Oversold",            group = grpS)
+extOb     = input.float(88, "Extreme overbought",  group = grpS)
+extOs     = input.float(12, "Extreme oversold",    group = grpS)
+zoneMemo  = input.int(5, "Bars a zone visit stays valid for a signal", minval = 1, group = grpS)
+
+grpF = "Filters"
+useTrend = input.bool(true,  "Require price trend agreement (EMA)", group = grpF)
+trendLen = input.int(200,    "Trend EMA length", minval = 2,         group = grpF)
+useAdx   = input.bool(false, "Require ADX strength",                group = grpF)
+adxLen   = input.int(14,     "ADX length", minval = 2,               group = grpF)
+adxMin   = input.float(20,   "Minimum ADX",                          group = grpF)
+useHtf   = input.bool(false, "Require higher-timeframe agreement",  group = grpF)
+htf      = input.timeframe("240", "Higher timeframe",                group = grpF)
+minAgree = input.int(6, "God-mode: components that must agree (of 7)", minval = 1, maxval = 7, group = grpF)
+
+grpD = "Divergences"
+showDiv = input.bool(true, "Show divergences",          group = grpD)
+pivL    = input.int(5,  "Pivot lookback left",  minval = 1, group = grpD)
+pivR    = input.int(5,  "Pivot lookback right", minval = 1, group = grpD)
+divMax  = input.int(60, "Max bars between pivots", minval = 5, group = grpD)
+
+grpV = "Display"
+showOnChart = input.bool(true, "Show signals on the price chart", group = grpV)
+showTable   = input.bool(true, "Show dashboard",                  group = grpV)
+showBg      = input.bool(true, "Shade god-mode alignment",        group = grpV)
+
+// ───────────────────────────── Colors ─────────────────────────────
+cBull = #00e676
+cBear = #ff5252
+cGold = #ffd54f
+cMute = #9aa4b2
+
+// ───────────────────────────── Helpers ────────────────────────────
+// Squash any unbounded value into 0..100 (k = value that maps to 75)
+squash(float x, float k) =>
+    50 + 50 * (x / (math.abs(x) + k))
+
+// The seven components, each already on a 0..100 scale
+f_components() =>
+    cRsi   = ta.rsi(close, lenRsi)
+    rawMfi = ta.mfi(hlc3, lenMfi)
+    cMfi   = ta.cum(nz(volume)) > 0 ? rawMfi : cRsi        // no volume (FX/index) -> fall back to RSI
+    cSto   = ta.sma(ta.stoch(close, high, low, lenStoch), smStoch)
+    cCci   = squash(ta.cci(hlc3, lenCci), 100)
+    cWpr   = 100 + ta.wpr(lenWpr)
+    cTsi   = 50 + 50 * ta.tsi(close, tsiShort, tsiLong)
+    cTrd   = squash((close - ta.ema(close, lenTrend)) / ta.atr(lenTrend), 1.0)
+    [cRsi, cMfi, cSto, cCci, cWpr, cTsi, cTrd]
+
+// Score of the previous bar (used on the higher timeframe so it never repaints)
+f_scorePrev() =>
+    [a, b, c, d, e, f, g] = f_components()
+    s = ta.ema((a + b + c + d + e + f + g) / 7, smoothLen)
+    s[1]
+
+// ───────────────────────────── Core ───────────────────────────────
+[cRsi, cMfi, cSto, cCci, cWpr, cTsi, cTrd] = f_components()
+score  = ta.ema((cRsi + cMfi + cSto + cCci + cWpr + cTsi + cTrd) / 7, smoothLen)
+signal = ta.sma(score, sigLen)
+
+bullCount = (cRsi > 50 ? 1 : 0) + (cMfi > 50 ? 1 : 0) + (cSto > 50 ? 1 : 0) + (cCci > 50 ? 1 : 0) + (cWpr > 50 ? 1 : 0) + (cTsi > 50 ? 1 : 0) + (cTrd > 50 ? 1 : 0)
+bearCount = (cRsi < 50 ? 1 : 0) + (cMfi < 50 ? 1 : 0) + (cSto < 50 ? 1 : 0) + (cCci < 50 ? 1 : 0) + (cWpr < 50 ? 1 : 0) + (cTsi < 50 ? 1 : 0) + (cTrd < 50 ? 1 : 0)
+
+// Higher timeframe score, previous closed HTF bar only (no repaint)
+htfScore = request.security(syminfo.tickerid, htf, f_scorePrev(), lookahead = barmerge.lookahead_on)
+
+// Filters
+trendEma = ta.ema(close, trendLen)
+[diPlus, diMinus, adx] = ta.dmi(adxLen, adxLen)
+adxOk     = not useAdx or adx >= adxMin
+upTrendOk = not useTrend or close > trendEma
+dnTrendOk = not useTrend or close < trendEma
+htfBullOk = not useHtf or htfScore > 50
+htfBearOk = not useHtf or htfScore < 50
+bullOk = upTrendOk and adxOk and htfBullOk
+bearOk = dnTrendOk and adxOk and htfBearOk
+
+// God-mode alignment: most components agree AND score has momentum
+godBull = bullCount >= minAgree and score > 50 and score > signal and bullOk
+godBear = bearCount >= minAgree and score < 50 and score < signal and bearOk
+
+// Reversal signals: score crosses its signal line after visiting a zone
+crossUp = ta.crossover(score, signal)
+crossDn = ta.crossunder(score, signal)
+recentLow  = ta.lowest(score, zoneMemo)
+recentHigh = ta.highest(score, zoneMemo)
+
+buy        = barstate.isconfirmed and crossUp and recentLow  <= osLevel and bullOk
+sell       = barstate.isconfirmed and crossDn and recentHigh >= obLevel and bearOk
+strongBuy  = buy  and recentLow  <= extOs
+strongSell = sell and recentHigh >= extOb
+godBullOn  = barstate.isconfirmed and godBull and not godBull[1]
+godBearOn  = barstate.isconfirmed and godBear and not godBear[1]
+
+// ───────────────────────────── Divergences ────────────────────────
+pl = ta.pivotlow(score, pivL, pivR)
+ph = ta.pivothigh(score, pivL, pivR)
+plFound = not na(pl)
+phFound = not na(ph)
+
+prevPlScore = ta.valuewhen(plFound, score[pivR], 1)
+prevPlPrice = ta.valuewhen(plFound, low[pivR], 1)
+prevPlBar   = ta.valuewhen(plFound, bar_index - pivR, 1)
+prevPhScore = ta.valuewhen(phFound, score[pivR], 1)
+prevPhPrice = ta.valuewhen(phFound, high[pivR], 1)
+prevPhBar   = ta.valuewhen(phFound, bar_index - pivR, 1)
+
+// Regular bullish: price lower low, score higher low (below midline)
+bullDiv = showDiv and plFound and score[pivR] > prevPlScore and low[pivR] < prevPlPrice and score[pivR] < 50 and (bar_index - pivR - prevPlBar) <= divMax
+// Regular bearish: price higher high, score lower high (above midline)
+bearDiv = showDiv and phFound and score[pivR] < prevPhScore and high[pivR] > prevPhPrice and score[pivR] > 50 and (bar_index - pivR - prevPhBar) <= divMax
+
+if bullDiv
+    line.new(int(prevPlBar), prevPlScore, bar_index - pivR, score[pivR], color = cBull, width = 2)
+if bearDiv
+    line.new(int(prevPhBar), prevPhScore, bar_index - pivR, score[pivR], color = cBear, width = 2)
+
+// ───────────────────────────── Plots (pane) ───────────────────────
+hExOb = hline(extOb,   "Extreme overbought", color = color.new(cBear, 60), linestyle = hline.style_dotted)
+hOb   = hline(obLevel, "Overbought",         color = color.new(cBear, 40), linestyle = hline.style_dashed)
+hline(50,              "Midline",            color = color.new(cMute, 50), linestyle = hline.style_dotted)
+hOs   = hline(osLevel, "Oversold",           color = color.new(cBull, 40), linestyle = hline.style_dashed)
+hExOs = hline(extOs,   "Extreme oversold",   color = color.new(cBull, 60), linestyle = hline.style_dotted)
+fill(hOb, hExOb, color = color.new(cBear, 90))
+fill(hOs, hExOs, color = color.new(cBull, 90))
+
+lineCol = godBull or godBear ? cGold : score > signal ? cBull : cBear
+pScore = plot(score,  "GodMode score", color = lineCol, linewidth = 2)
+pSig   = plot(signal, "Signal",        color = color.new(cMute, 20))
+fill(pScore, pSig, color = score > signal ? color.new(cBull, 80) : color.new(cBear, 80))
+plot(useHtf ? htfScore : na, "HTF score", color = color.new(#40c4ff, 30), style = plot.style_stepline)
+
+bgcolor(showBg and godBull ? color.new(cBull, 88) : showBg and godBear ? color.new(cBear, 88) : na, title = "God-mode shading")
+
+plotshape(buy and not strongBuy,  "Buy",         shape.triangleup,   location.bottom, cBull, size = size.tiny)
+plotshape(strongBuy,              "Strong buy",  shape.triangleup,   location.bottom, cGold, size = size.small)
+plotshape(sell and not strongSell, "Sell",       shape.triangledown, location.top,    cBear, size = size.tiny)
+plotshape(strongSell,             "Strong sell", shape.triangledown, location.top,    cGold, size = size.small)
+plotshape(bullDiv, "Bullish divergence", shape.circle, location.absolute, cBull, size = size.tiny, offset = -pivR, display = display.pane)
+plotshape(bearDiv, "Bearish divergence", shape.circle, location.absolute, cBear, size = size.tiny, offset = -pivR, display = display.pane)
+
+// ───────────────────────────── Plots (price chart) ────────────────
+plotshape(showOnChart and buy and not strongBuy,   "Chart buy",         shape.labelup,   location.belowbar, color.new(cBull, 0), text = "BUY",  textcolor = color.black, size = size.small, force_overlay = true)
+plotshape(showOnChart and strongBuy,               "Chart strong buy",  shape.labelup,   location.belowbar, color.new(cGold, 0), text = "GOD\nBUY",  textcolor = color.black, size = size.small, force_overlay = true)
+plotshape(showOnChart and sell and not strongSell, "Chart sell",        shape.labeldown, location.abovebar, color.new(cBear, 0), text = "SELL", textcolor = color.white, size = size.small, force_overlay = true)
+plotshape(showOnChart and strongSell,              "Chart strong sell", shape.labeldown, location.abovebar, color.new(cGold, 0), text = "GOD\nSELL", textcolor = color.black, size = size.small, force_overlay = true)
+plotshape(showOnChart and godBullOn, "Chart god-mode bull", shape.diamond, location.belowbar, cGold, size = size.tiny, force_overlay = true)
+plotshape(showOnChart and godBearOn, "Chart god-mode bear", shape.diamond, location.abovebar, cGold, size = size.tiny, force_overlay = true)
+plot(useTrend and showOnChart ? trendEma : na, "Trend EMA", color = color.new(cMute, 30), force_overlay = true)
+
+// ───────────────────────────── Dashboard ──────────────────────────
+var table dash = table.new(position.top_right, 2, 12, bgcolor = color.new(#0b0f14, 5), frame_color = color.new(cMute, 60), frame_width = 1, border_color = color.new(cMute, 85), border_width = 1)
+
+valCol(float v) =>
+    v >= 50 ? cBull : cBear
+
+putRow(int r, string txt, string val, color col) =>
+    table.cell(dash, 0, r, txt, text_color = cMute, text_size = size.small, text_halign = text.align_left)
+    table.cell(dash, 1, r, val, text_color = col,   text_size = size.small, text_halign = text.align_right)
+
+if showTable and barstate.islast
+    state    = godBull ? "GOD MODE ▲" : godBear ? "GOD MODE ▼" : score >= obLevel ? "Overbought" : score <= osLevel ? "Oversold" : score > signal ? "Rising" : "Falling"
+    stateCol = godBull or godBear ? cGold : score > signal ? cBull : cBear
+    putRow(0,  "State",        state, stateCol)
+    putRow(1,  "Score",        str.tostring(score, "#.0"), valCol(score))
+    putRow(2,  "Alignment",    str.tostring(math.max(bullCount, bearCount)) + "/7 " + (bullCount >= bearCount ? "bull" : "bear"), bullCount >= bearCount ? cBull : cBear)
+    putRow(3,  "RSI",          str.tostring(cRsi, "#.0"), valCol(cRsi))
+    putRow(4,  "MFI",          str.tostring(cMfi, "#.0"), valCol(cMfi))
+    putRow(5,  "Stochastic",   str.tostring(cSto, "#.0"), valCol(cSto))
+    putRow(6,  "CCI (scaled)", str.tostring(cCci, "#.0"), valCol(cCci))
+    putRow(7,  "Williams %R",  str.tostring(cWpr, "#.0"), valCol(cWpr))
+    putRow(8,  "TSI (scaled)", str.tostring(cTsi, "#.0"), valCol(cTsi))
+    putRow(9,  "Trend chan.",  str.tostring(cTrd, "#.0"), valCol(cTrd))
+    putRow(10, "Trend / ADX",  (close > trendEma ? "Up" : "Down") + " / " + str.tostring(adx, "#"), close > trendEma ? cBull : cBear)
+    putRow(11, "HTF score",    useHtf ? str.tostring(htfScore, "#.0") : "off", useHtf ? valCol(htfScore) : cMute)
+
+// ───────────────────────────── Alerts ─────────────────────────────
+alertcondition(buy,        "GodMode Buy",               "GodMode BUY on {{ticker}} ({{interval}}) @ {{close}}")
+alertcondition(strongBuy,  "GodMode Strong Buy",        "GodMode STRONG BUY on {{ticker}} ({{interval}}) @ {{close}}")
+alertcondition(sell,       "GodMode Sell",              "GodMode SELL on {{ticker}} ({{interval}}) @ {{close}}")
+alertcondition(strongSell, "GodMode Strong Sell",       "GodMode STRONG SELL on {{ticker}} ({{interval}}) @ {{close}}")
+alertcondition(godBullOn,  "God-mode bull alignment",   "God-mode BULL alignment started on {{ticker}} ({{interval}})")
+alertcondition(godBearOn,  "God-mode bear alignment",   "God-mode BEAR alignment started on {{ticker}} ({{interval}})")
+alertcondition(bullDiv,    "GodMode bullish divergence", "Bullish divergence on {{ticker}} ({{interval}})")
+alertcondition(bearDiv,    "GodMode bearish divergence", "Bearish divergence on {{ticker}} ({{interval}})")
