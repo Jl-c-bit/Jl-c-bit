@@ -37,7 +37,7 @@ The momentum score itself (7 readings) is unchanged.
 
 ## Things to know
 - **Live data costs extra.** Free TradingView futures prices are delayed about 10 minutes, which is useless for
-  day trading. Real-time needs the CME data add-on (a few dollars a month for non-professional use).
+  day trading. Real-time needs the paid CME data add-on (check the current price under TradingView → Market data subscriptions).
 - **Regime on intraday charts** uses the 9 sector ETFs and volatility from the previous day. It changes at most once a day.
 - **Sessions:** VWAP resets each trading session. Signals near the open, while VWAP has little data, are less reliable.
 - **Risk:** decide your stop-loss and position size before you enter. One MES contract moving 20 points is $100.
