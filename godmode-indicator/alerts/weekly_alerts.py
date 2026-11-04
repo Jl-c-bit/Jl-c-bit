@@ -1,0 +1,96 @@
+"""Weekly GodMode alerts: prints a short phone-friendly message.
+
+    python3 weekly_alerts.py DATA_DIR [--today YYYY-MM-DD]
+
+DATA_DIR must hold Alpha Vantage weekly CSVs named <symbol>_weekly.csv
+(columns timestamp,open,high,low,close,volume):
+    spy eem xle            ETFs (TIME_SERIES_WEEKLY)
+    btc eth                crypto (DIGITAL_CURRENCY_WEEKLY, market USD)
+    xlb xlf xli xlk xlp xlu xlv xly (+ xle)   sector ETFs for breadth
+
+Only completed weeks are used: bars dated in the current week (Mon-Sun) are dropped.
+--today lets you replay an earlier week.
+Two kinds of alert, both judged on the latest completed week vs the one before:
+  REGIME  risk-on/off switch (the tested part). Turned risk-on = BUY back to 100%;
+          turned risk-off = SELL down to 50%.
+  ARROWS  the indicator's BUY / SELL / GOD BUY / GOD SELL arrows with the Weekly
+          preset. In testing these did no better than chance.
+Crypto alerts are untested (the backtests covered SPY, EEM and XLE only).
+Not financial advice.
+"""
+import os
+import sys
+from datetime import date, timedelta
+
+import numpy as np
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'backtest'))
+import report  # noqa: E402
+
+ETFS = ['spy', 'eem', 'xle']
+CRYPTO = ['btc', 'eth']
+P = report.WEEKLY
+EXT_OS, EXT_OB = 12, 88                           # extreme zones, as in the Pine script
+
+
+def completed(df, today):
+    """Keep only weeks that finished before the current week (Monday 00:00) began."""
+    monday = today - timedelta(days=today.weekday())
+    return df[df.timestamp.dt.date < monday].reset_index(drop=True)
+
+
+def analyse(sym, today):
+    df = completed(report.load(sym, adjust_splits=sym not in CRYPTO), today)
+    c, dates = df.close, df.timestamp
+    ind = report.indicators(df)
+    S = report.signals(c, ind, {}, P['trend'], P['os'], P['ob'], P['memo'], P['agree'])
+    score = ind['score']
+    god_buy = S['BUY'] & (score.rolling(P['memo']).min() <= EXT_OS)
+    god_sell = S['SELL'] & (score.rolling(P['memo']).max() >= EXT_OB)
+
+    breadth = report.breadth_series(dates)[0]
+    vol = np.log(c / c.shift()).rolling(13).std() * np.sqrt(52) * 100
+    volpct = vol.rolling(157).apply(lambda x: (x[:-1] < x[-1]).mean() * 100, raw=True)
+    on = (breadth >= 50) & (volpct <= 80)
+
+    i = len(df) - 1
+    alerts = []
+    if on[i] and not on[i - 1]:
+        alerts.append("REGIME BUY: turned risk-on, back to 100%")
+    elif not on[i] and on[i - 1]:
+        alerts.append("REGIME SELL: turned risk-off, cut to 50%")
+    for name, mask in (('GOD BUY', god_buy), ('BUY', S['BUY'] & ~god_buy),
+                       ('GOD SELL', god_sell), ('SELL', S['SELL'] & ~god_sell)):
+        if mask[i]:
+            alerts.append(f"ARROW {name}")
+    status = (f"{'RISK-ON 100%' if on[i] else 'RISK-OFF 50%'} · score {score[i]:.0f} "
+              f"{'rising' if score[i] > ind['sig'][i] else 'falling'} · close {c[i]:,.2f}")
+    return dict(sym=sym.upper(), week=dates[i].date(), alerts=alerts, status=status,
+                untested=sym in CRYPTO, breadth=breadth[i], volpct=volpct[i])
+
+
+def main():
+    if len(sys.argv) < 2:
+        sys.exit(__doc__)
+    report.DATA_DIR = os.path.abspath(sys.argv[1])
+    today = date.fromisoformat(sys.argv[sys.argv.index('--today') + 1]) if '--today' in sys.argv else date.today()
+    results = [analyse(s, today) for s in ETFS + CRYPTO]
+
+    fired = [r for r in results if r['alerts']]
+    if fired:
+        head = ' | '.join(f"{r['sym']}: {', '.join(a.split(':')[0] for a in r['alerts'])}" for r in fired)
+    else:
+        head = 'No new signals this week'
+    lines = [f"GodMode weekly: {head}", '']
+    for r in results:
+        tag = ' (crypto, untested)' if r['untested'] else ''
+        lines.append(f"{r['sym']}{tag}, week of {r['week']}")
+        lines += [f"  -> {a}" for a in r['alerts']]
+        lines.append(f"  {r['status']}")
+    lines += ['', f"US breadth {results[0]['breadth']:.0f}% of sectors above trend.",
+              "Regime alerts are the tested part; arrows did no better than chance in testing. Not financial advice."]
+    print('\n'.join(lines))
+
+
+if __name__ == '__main__':
+    main()
