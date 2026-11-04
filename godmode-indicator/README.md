@@ -49,6 +49,14 @@ test the indicator outside a steady uptrend. Result: **no consistent edge**.
   drawdown relief: in choppy, mean-reverting markets it sells near lows and buys back higher.
 - Settings re-tuned per ETF on 2003–2016 didn't hold up on 2017–2026 either.
 
+### As a filter on other entries (`backtest/filter_test.py`)
+Tested on a 10/40-week MA crossover, a 20/10-week Donchian breakout and a Bollinger dip-buy, on SPY, EEM and XLE.
+- **Entry filter = no effect on trend entries.** At every MA-cross and breakout entry the score was already
+  >50, ≥5/7 bullish and not in god-mode bear, so the filter never blocked a trade. It measures the same thing.
+- **Entry filter = blocks every dip-buy.** Oversold entries are by definition bearish momentum.
+- **Early exit on god-mode bear:** helped the MA system in 2 of 6 cases (SPY and EEM 2017–26), hurt in 4
+  (badly on XLE). Inconsistent.
+
 Treat it as a dashboard of momentum conditions, not a standalone trading system.
 
 Re-run: save Alpha Vantage `TIME_SERIES_WEEKLY` CSV for SPY as `backtest/spy_weekly.csv`, then
