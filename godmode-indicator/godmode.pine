@@ -6,7 +6,7 @@
 indicator("GodMode Confluence Oscillator", shorttitle = "GodMode", overlay = false, max_lines_count = 500, max_labels_count = 500)
 
 // ───────────────────────────── Inputs ─────────────────────────────
-preset = input.string("Custom (inputs below)", "Preset", options = ["Custom (inputs below)", "Weekly (tuned on SPY)"], tooltip = "Weekly preset: trend EMA 20, oversold 35, overbought 65, zone memory 8 bars, 5 of 7 must agree. Picked on SPY 2003-2016, checked on 2017-2026.")
+preset = input.string("Custom (inputs below)", "Preset", options = ["Custom (inputs below)", "Weekly (tuned on SPY)", "Intraday (1-15 min, untested)"], tooltip = "Weekly: trend EMA 20, oversold 35, overbought 65, zone memory 8 bars, 5 of 7 must agree. Picked on SPY 2003-2016, checked on 2017-2026.\nIntraday: trend filter = session VWAP, oversold 30, overbought 70, zone memory 3 bars, 5 of 7 must agree. Not backtested: paper trade first.")
 grpC = "Components"
 lenRsi   = input.int(14, "RSI length",               minval = 2, group = grpC)
 lenMfi   = input.int(14, "MFI length",               minval = 2, group = grpC)
@@ -65,11 +65,12 @@ showBg      = input.bool(true, "Shade god-mode alignment",        group = grpV)
 
 // Effective settings (preset overrides the matching inputs)
 isWeekly = preset == "Weekly (tuned on SPY)"
+isIntra  = preset == "Intraday (1-15 min, untested)"
 trendLenE = isWeekly ? 20 : trendLen
-osLevelE  = isWeekly ? 35.0 : osLevel
-obLevelE  = isWeekly ? 65.0 : obLevel
-zoneMemoE = isWeekly ? 8 : zoneMemo
-minAgreeE = isWeekly ? 5 : minAgree
+osLevelE  = isWeekly ? 35.0 : isIntra ? 30.0 : osLevel
+obLevelE  = isWeekly ? 65.0 : isIntra ? 70.0 : obLevel
+zoneMemoE = isWeekly ? 8 : isIntra ? 3 : zoneMemo
+minAgreeE = isWeekly ? 5 : isIntra ? 5 : minAgree
 
 scaleK   = autoScale and (timeframe.isdaily or timeframe.isintraday) ? 5 : 1
 volLenE  = volLen * scaleK
@@ -105,6 +106,10 @@ f_scorePrev() =>
     s = ta.ema((a + b + c + d + e + f + g) / 7, smoothLen)
     s[1]
 
+// Regime volatility: percentile of realized volatility (log returns) vs its own history
+f_volPct(int len, int look) =>
+    ta.percentrank(ta.stdev(math.log(close / close[1]), len) * 100, look)
+
 // 1 if this symbol closes above its trend SMA, else 0
 f_above(int len) =>
     close > ta.sma(close, len) ? 1.0 : 0.0
@@ -120,23 +125,27 @@ f_pct(array<float> a) =>
     n > 0 ? sum / n * 100 : na
 
 // ───────────────────────────── Market regime ──────────────────────
-logRet   = math.log(close / close[1])
-realVol  = ta.stdev(logRet, volLenE) * 100
-vixClose = request.security(volSym, timeframe.period, close, ignore_invalid_symbol = true)
-volVal   = volSrc == "Realized (this chart)" ? realVol : vixClose
-volPct   = ta.percentrank(volVal, volLookE)
+// On intraday charts the regime is read from the previous completed DAILY bar:
+// "is today a risk-on day?" (no repainting, and 1-minute noise does not flip it).
+regHtf   = timeframe.isintraday
+regimeTf = regHtf ? "D" : timeframe.period
+regLook  = regHtf ? barmerge.lookahead_on : barmerge.lookahead_off
+regOff   = regHtf ? 1 : 0
+realPct  = request.security(syminfo.tickerid, regimeTf, f_volPct(volLenE, volLookE)[regOff], lookahead = regLook)
+vixPct   = request.security(volSym, regimeTf, ta.percentrank(close, volLookE)[regOff], lookahead = regLook, ignore_invalid_symbol = true)
+volPct   = volSrc == "Realized (this chart)" ? realPct : vixPct
 
-sXLB = request.security("AMEX:XLB", timeframe.period, f_above(brLenE), ignore_invalid_symbol = true)
-sXLE = request.security("AMEX:XLE", timeframe.period, f_above(brLenE), ignore_invalid_symbol = true)
-sXLF = request.security("AMEX:XLF", timeframe.period, f_above(brLenE), ignore_invalid_symbol = true)
-sXLI = request.security("AMEX:XLI", timeframe.period, f_above(brLenE), ignore_invalid_symbol = true)
-sXLK = request.security("AMEX:XLK", timeframe.period, f_above(brLenE), ignore_invalid_symbol = true)
-sXLP = request.security("AMEX:XLP", timeframe.period, f_above(brLenE), ignore_invalid_symbol = true)
-sXLU = request.security("AMEX:XLU", timeframe.period, f_above(brLenE), ignore_invalid_symbol = true)
-sXLV = request.security("AMEX:XLV", timeframe.period, f_above(brLenE), ignore_invalid_symbol = true)
-sXLY = request.security("AMEX:XLY", timeframe.period, f_above(brLenE), ignore_invalid_symbol = true)
+sXLB = request.security("AMEX:XLB", regimeTf, f_above(brLenE)[regOff], lookahead = regLook, ignore_invalid_symbol = true)
+sXLE = request.security("AMEX:XLE", regimeTf, f_above(brLenE)[regOff], lookahead = regLook, ignore_invalid_symbol = true)
+sXLF = request.security("AMEX:XLF", regimeTf, f_above(brLenE)[regOff], lookahead = regLook, ignore_invalid_symbol = true)
+sXLI = request.security("AMEX:XLI", regimeTf, f_above(brLenE)[regOff], lookahead = regLook, ignore_invalid_symbol = true)
+sXLK = request.security("AMEX:XLK", regimeTf, f_above(brLenE)[regOff], lookahead = regLook, ignore_invalid_symbol = true)
+sXLP = request.security("AMEX:XLP", regimeTf, f_above(brLenE)[regOff], lookahead = regLook, ignore_invalid_symbol = true)
+sXLU = request.security("AMEX:XLU", regimeTf, f_above(brLenE)[regOff], lookahead = regLook, ignore_invalid_symbol = true)
+sXLV = request.security("AMEX:XLV", regimeTf, f_above(brLenE)[regOff], lookahead = regLook, ignore_invalid_symbol = true)
+sXLY = request.security("AMEX:XLY", regimeTf, f_above(brLenE)[regOff], lookahead = regLook, ignore_invalid_symbol = true)
 sectorBreadth = f_pct(array.from(sXLB, sXLE, sXLF, sXLI, sXLK, sXLP, sXLU, sXLV, sXLY))
-symBreadth    = request.security(brSym, timeframe.period, close, ignore_invalid_symbol = true)
+symBreadth    = request.security(brSym, regimeTf, close[regOff], lookahead = regLook, ignore_invalid_symbol = true)
 breadth = brSrc == "Off" ? na : brSrc == "Sector ETFs (9 SPDRs)" ? sectorBreadth : symBreadth
 
 volHigh = volPct > volMax
@@ -156,10 +165,12 @@ htfScore = request.security(syminfo.tickerid, htf, f_scorePrev(), lookahead = ba
 
 // Filters
 trendEma = ta.ema(close, trendLenE)
+sessVwap = ta.vwap(hlc3)                          // resets each session; the intraday trend line
+trendLine = isIntra and not na(sessVwap) ? sessVwap : trendEma
 [diPlus, diMinus, adx] = ta.dmi(adxLen, adxLen)
 adxOk     = not useAdx or adx >= adxMin
-upTrendOk = not useTrend or close > trendEma
-dnTrendOk = not useTrend or close < trendEma
+upTrendOk = not useTrend or close > trendLine
+dnTrendOk = not useTrend or close < trendLine
 htfBullOk = not useHtf or htfScore > 50
 htfBearOk = not useHtf or htfScore < 50
 bullOk = upTrendOk and adxOk and htfBullOk
@@ -237,7 +248,7 @@ plotshape(showOnChart and sell and not strongSell, "Chart sell",        shape.la
 plotshape(showOnChart and strongSell,              "Chart strong sell", shape.labeldown, location.abovebar, color.new(cGold, 0), text = "GOD\nSELL", textcolor = color.black, size = size.small, force_overlay = true)
 plotshape(showOnChart and godBullOn, "Chart god-mode bull", shape.diamond, location.belowbar, cGold, size = size.tiny, force_overlay = true)
 plotshape(showOnChart and godBearOn, "Chart god-mode bear", shape.diamond, location.abovebar, cGold, size = size.tiny, force_overlay = true)
-plot(useTrend and showOnChart ? trendEma : na, "Trend EMA", color = color.new(cMute, 30), force_overlay = true)
+plot(useTrend and showOnChart ? trendLine : na, "Trend line (EMA, or VWAP on Intraday)", color = color.new(cMute, 30), force_overlay = true)
 
 // ───────────────────────────── Dashboard ──────────────────────────
 var table dash = table.new(position.top_right, 2, 16, bgcolor = color.new(#0b0f14, 5), frame_color = color.new(cMute, 60), frame_width = 1, border_color = color.new(cMute, 85), border_width = 1)
@@ -262,12 +273,12 @@ if showTable and barstate.islast
     putRow(7,  "Williams %R",  str.tostring(cWpr, "#.0"), valCol(cWpr))
     putRow(8,  "TSI (scaled)", str.tostring(cTsi, "#.0"), valCol(cTsi))
     putRow(9,  "Trend chan.",  str.tostring(cTrd, "#.0"), valCol(cTrd))
-    putRow(10, "Trend / ADX",  (close > trendEma ? "Up" : "Down") + " / " + str.tostring(adx, "#"), close > trendEma ? cBull : cBear)
+    putRow(10, isIntra ? "VWAP / ADX" : "Trend / ADX", (close > trendLine ? "Above" : "Below") + " / " + str.tostring(adx, "#"), close > trendLine ? cBull : cBear)
     putRow(11, "HTF score",    useHtf ? str.tostring(htfScore, "#.0") : "off", useHtf ? valCol(htfScore) : cMute)
     if showRegime
         putRow(12, "Volatility",   na(volPct) ? "n/a" : str.tostring(volPct, "#") + " pct" + (volHigh ? " HIGH" : ""), volHigh ? cBear : cBull)
         putRow(13, "Breadth",      brSrc == "Off" ? "off" : na(breadth) ? "n/a" : str.tostring(breadth, "#") + "% above", brWeak ? cBear : cBull)
-        putRow(14, "Regime",       riskOn ? "RISK-ON" : "RISK-OFF", riskOn ? cBull : cBear)
+        putRow(14, regHtf ? "Regime (daily)" : "Regime", riskOn ? "RISK-ON" : "RISK-OFF", riskOn ? cBull : cBear)
         putRow(15, "Exposure",     (riskOn ? "100" : str.tostring(offExp)) + "%", riskOn ? cBull : cGold)
 
 // ───────────────────────────── Alerts ─────────────────────────────

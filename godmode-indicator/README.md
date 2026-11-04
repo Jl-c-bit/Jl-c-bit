@@ -27,6 +27,11 @@ Signals confirm on bar close, and the higher-timeframe filter uses the last
 
 Not financial advice. Backtest on your own markets before trading real money.
 
+## Intraday preset (1, 5, 15-minute futures)
+Pick **Preset → Intraday (1-15 min, untested)** on 1–15 minute charts: session VWAP as the trend filter,
+zones 30/70, and the market regime read from the previous daily bar. Step-by-step setup for MES/MNQ futures
+with TradingView phone alerts: **[INTRADAY.md](INTRADAY.md)**. Not backtested; paper trade first.
+
 ## Weekly preset & backtest (SPY, Alpha Vantage weekly data)
 Pick **Preset → Weekly (tuned on SPY)** on weekly charts: trend EMA 20, oversold 35,
 overbought 65, zone memory 8 bars, 5 of 7 must agree. Settings were chosen on
