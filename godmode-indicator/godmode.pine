@@ -55,6 +55,7 @@ volMax  = input.float(80, "High volatility above percentile", minval = 1, maxval
 brSrc   = input.string("Sector ETFs (9 SPDRs)", "Breadth source", options = ["Sector ETFs (9 SPDRs)", "Percent symbol", "Off"], group = grpR)
 brSym   = input.symbol("INDEX:S5TH", "Breadth percent symbol (0-100)", group = grpR, tooltip = "e.g. INDEX:S5TH (% of S&P 500 above 200-day MA) or INDEX:S5FI (above 50-day)")
 brLen   = input.int(40, "Sector trend SMA length", minval = 2, group = grpR)
+offExp  = input.int(50, "Suggested exposure in risk-off (%)", minval = 0, maxval = 100, group = grpR, tooltip = "Backtest (SPY/EEM/XLE weekly 2003-2026): 100% risk-on / 50% risk-off had a smaller max drawdown than a fixed exposure with the same average in 6 of 6 tests, but higher return in only 3 of 6.")
 brMin   = input.float(50, "Healthy breadth: at least % above trend", minval = 1, maxval = 99, group = grpR)
 
 grpV = "Display"
@@ -239,7 +240,7 @@ plotshape(showOnChart and godBearOn, "Chart god-mode bear", shape.diamond, locat
 plot(useTrend and showOnChart ? trendEma : na, "Trend EMA", color = color.new(cMute, 30), force_overlay = true)
 
 // ───────────────────────────── Dashboard ──────────────────────────
-var table dash = table.new(position.top_right, 2, 15, bgcolor = color.new(#0b0f14, 5), frame_color = color.new(cMute, 60), frame_width = 1, border_color = color.new(cMute, 85), border_width = 1)
+var table dash = table.new(position.top_right, 2, 16, bgcolor = color.new(#0b0f14, 5), frame_color = color.new(cMute, 60), frame_width = 1, border_color = color.new(cMute, 85), border_width = 1)
 
 valCol(float v) =>
     v >= 50 ? cBull : cBear
@@ -267,6 +268,7 @@ if showTable and barstate.islast
         putRow(12, "Volatility",   na(volPct) ? "n/a" : str.tostring(volPct, "#") + " pct" + (volHigh ? " HIGH" : ""), volHigh ? cBear : cBull)
         putRow(13, "Breadth",      brSrc == "Off" ? "off" : na(breadth) ? "n/a" : str.tostring(breadth, "#") + "% above", brWeak ? cBear : cBull)
         putRow(14, "Regime",       riskOn ? "RISK-ON" : "RISK-OFF", riskOn ? cBull : cBear)
+        putRow(15, "Exposure",     (riskOn ? "100" : str.tostring(offExp)) + "%", riskOn ? cBull : cGold)
 
 // ───────────────────────────── Alerts ─────────────────────────────
 alertcondition(buy,        "GodMode Buy",               "GodMode BUY on {{ticker}} ({{interval}}) @ {{close}}")

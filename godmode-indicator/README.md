@@ -74,10 +74,27 @@ Backtest (`backtest/regime_test.py`, weekly, rules fixed in advance):
   three ETFs (rebounds after sell-offs).
 - Holding only in risk-on cut the worst drawdown everywhere (SPY -56%→-19%, EEM -64%→-35%, XLE -56%→-35%
   in 2003–16) but gave up return everywhere except EEM 2003–16, and badly on XLE 2017–26 (+4% vs +76%).
-- Untested idea: use it to size positions down in risk-off rather than exiting entirely.
+
+### Position sizing by regime (`backtest/sizing_test.py`)
+Exposure 100% in risk-on, 50% in risk-off, vs. a **fixed** exposure with the same average (~84%) — the fair
+comparison, because owning less always means smaller swings.
+
+| | Regime 100/50 CAGR / max DD | Fixed same-avg CAGR / max DD |
+|---|---|---|
+| SPY 2003–16 | +6.4% / -34% | +6.4% / -49% |
+| SPY 2017–26 | +10.0% / -23% | +11.2% / -28% |
+| EEM 2003–16 | +2.4% / -41% | +2.1% / -55% |
+| EEM 2017–26 | +4.4% / -34% | +4.8% / -35% |
+| XLE 2003–16 | +9.0% / -40% | +8.2% / -49% |
+| XLE 2017–26 | +3.8% / -57% | +5.6% / -60% |
+
+- Smaller max drawdown than fixed exposure in **6 of 6**; equal or higher return in **3 of 6**.
+- The big wins came from the slow 2008 bear market; in 2017–26 (fast V-shaped crashes like 2020) it lagged.
+- 100/50 beat going fully to cash (100/0) on return in every test. Cash assumed to earn 0%.
+- The dashboard shows a **suggested exposure** row (risk-off level is an input, default 50%).
 
 Treat it as a dashboard of momentum conditions, not a standalone trading system.
 
 Re-run: save Alpha Vantage `TIME_SERIES_WEEKLY` CSV for SPY as `backtest/spy_weekly.csv`, then
-`cd backtest && python3 retune.py spy_weekly.csv` (same for `eem_weekly.csv`, `xle_weekly.csv`); `regime_test.py` also needs the 9 sector ETF CSVs (`xlb_weekly.csv` … `xly_weekly.csv`) (needs pandas).
+`cd backtest && python3 retune.py spy_weekly.csv` (same for `eem_weekly.csv`, `xle_weekly.csv`); `regime_test.py` and `sizing_test.py` also need the 9 sector ETF CSVs (`xlb_weekly.csv` … `xly_weekly.csv`) (needs pandas).
 Share splits are back-adjusted automatically; dividends are not included.
