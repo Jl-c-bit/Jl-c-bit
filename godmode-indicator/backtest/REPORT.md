@@ -1,6 +1,6 @@
 # GodMode Confluence Oscillator: Backtest Report
 
-_Generated 2026-11-04 by `backtest/report.py` from Alpha Vantage weekly data._
+_Generated 2026-11-05 by `backtest/report.py` from Alpha Vantage weekly data._
 
 **Bottom line:** the momentum score has no consistent trading edge, on its own or as a filter. The volatility + breadth regime predicts *risk* rather than direction: sizing down to 50% in risk-off cut max drawdown versus an equal-average fixed exposure in 6 of 6 tests, but matched or beat its return in only 3 of 6.
 
@@ -239,7 +239,68 @@ Smaller max drawdown than fixed exposure in **6 of 6**; equal or higher CAGR in 
 
 </details>
 
-## 6. Latest readings
+## 6. Fewer false alarms: regime variants
+
+Uses **dividend-adjusted** prices, so buy & hold here includes dividends (unlike sections 1–5). Each rule holds 100% when risk-on and 50% when risk-off, and is compared with a fixed exposure equal to its own average. Rules were fixed before testing; nothing was tuned on either period.
+
+- **Current regime**: as in section 4.
+- **2-week confirmation**: switch only after two weeks in a row point the other way.
+- **Hysteresis**: go risk-off when volatility passes the 80th percentile or breadth falls below 50%; come back only when volatility is below the 60th percentile and breadth is at least 55%.
+- **12-month trend**: risk-on while the price is above its level 52 weeks earlier.
+- **Regime + 12-month trend**: risk-on only when both agree.
+
+| Rule | Switches per year (avg) | Smaller max DD than fixed | CAGR ≥ fixed |
+|---|---|---|---|
+| Current regime | 4.3 | 6 of 6 | 3 of 6 |
+| 2-week confirmation | 2.5 | 6 of 6 | 4 of 6 |
+| Hysteresis | 2.9 | 6 of 6 | 2 of 6 |
+| 12-month trend | 2.7 | 6 of 6 | 3 of 6 |
+| Regime + 12-month trend | 4.7 | 6 of 6 | 2 of 6 |
+
+<details><summary>Every ETF and period</summary>
+
+| ETF | Period | Rule | Switches | CAGR | Max DD | Fixed same avg: CAGR / max DD | Avg exposure |
+|---|---|---|---|---|---|---|---|
+| SPY | Train | Buy & hold (with dividends) | – | +9.6% | -55% | – | – |
+| SPY | Train | Current regime | 57 (4.1/yr) | +8.1% | -33% | +8.2% / -48% | 84% |
+| SPY | Train | 2-week confirmation | 35 (2.5/yr) | +8.8% | -33% | +8.2% / -48% | 84% |
+| SPY | Train | Hysteresis | 43 (3.1/yr) | +7.1% | -33% | +7.9% / -46% | 80% |
+| SPY | Train | 12-month trend | 25 (1.8/yr) | +8.8% | -35% | +8.8% / -51% | 91% |
+| SPY | Train | Regime + 12-month trend | 63 (4.5/yr) | +6.8% | -33% | +8.0% / -47% | 82% |
+| SPY | Test | Buy & hold (with dividends) | – | +14.9% | -32% | – | – |
+| SPY | Test | Current regime | 40 (4.0/yr) | +11.8% | -22% | +12.9% / -28% | 87% |
+| SPY | Test | 2-week confirmation | 24 (2.4/yr) | +12.5% | -22% | +13.0% / -28% | 87% |
+| SPY | Test | Hysteresis | 26 (2.6/yr) | +11.7% | -22% | +12.2% / -26% | 81% |
+| SPY | Test | 12-month trend | 12 (1.2/yr) | +13.6% | -26% | +13.9% / -30% | 94% |
+| SPY | Test | Regime + 12-month trend | 36 (3.6/yr) | +11.9% | -22% | +12.7% / -28% | 85% |
+| EEM | Train | Buy & hold (with dividends) | – | +3.9% | -63% | – | – |
+| EEM | Train | Current regime | 41 (3.9/yr) | +4.1% | -41% | +3.7% / -54% | 81% |
+| EEM | Train | 2-week confirmation | 23 (2.2/yr) | +4.0% | -37% | +3.7% / -54% | 81% |
+| EEM | Train | Hysteresis | 29 (2.8/yr) | +2.7% | -41% | +3.7% / -53% | 78% |
+| EEM | Train | 12-month trend | 42 (4.0/yr) | +3.6% | -45% | +3.7% / -54% | 80% |
+| EEM | Train | Regime + 12-month trend | 55 (5.2/yr) | +2.9% | -41% | +3.5% / -49% | 71% |
+| EEM | Test | Buy & hold (with dividends) | – | +7.9% | -39% | – | – |
+| EEM | Test | Current regime | 48 (4.9/yr) | +6.9% | -28% | +6.8% / -34% | 83% |
+| EEM | Test | 2-week confirmation | 24 (2.4/yr) | +7.0% | -29% | +6.8% / -34% | 84% |
+| EEM | Test | Hysteresis | 36 (3.6/yr) | +6.7% | -32% | +6.5% / -32% | 79% |
+| EEM | Test | 12-month trend | 20 (2.0/yr) | +8.0% | -30% | +6.8% / -34% | 84% |
+| EEM | Test | Regime + 12-month trend | 40 (4.0/yr) | +7.3% | -30% | +6.3% / -31% | 76% |
+| XLE | Train | Buy & hold (with dividends) | – | +11.4% | -56% | – | – |
+| XLE | Train | Current regime | 55 (3.9/yr) | +10.4% | -39% | +9.9% / -48% | 83% |
+| XLE | Train | 2-week confirmation | 33 (2.4/yr) | +11.3% | -36% | +9.9% / -48% | 83% |
+| XLE | Train | Hysteresis | 29 (2.1/yr) | +10.7% | -38% | +9.4% / -46% | 78% |
+| XLE | Train | 12-month trend | 23 (1.6/yr) | +12.0% | -40% | +10.2% / -50% | 87% |
+| XLE | Train | Regime + 12-month trend | 59 (4.2/yr) | +10.5% | -33% | +9.3% / -46% | 77% |
+| XLE | Test | Buy & hold (with dividends) | – | +9.7% | -64% | – | – |
+| XLE | Test | Current regime | 51 (5.2/yr) | +6.5% | -54% | +8.8% / -57% | 84% |
+| XLE | Test | 2-week confirmation | 28 (2.8/yr) | +5.8% | -54% | +8.8% / -57% | 84% |
+| XLE | Test | Hysteresis | 31 (3.1/yr) | +5.6% | -53% | +8.4% / -54% | 78% |
+| XLE | Test | 12-month trend | 56 (5.7/yr) | +7.5% | -46% | +8.7% / -56% | 83% |
+| XLE | Test | Regime + 12-month trend | 65 (6.6/yr) | +6.4% | -43% | +8.1% / -52% | 75% |
+
+</details>
+
+## 7. Latest readings
 
 | ETF | Week | Close | Score | Direction | Agreement | vs 20w EMA | Vol pct | Breadth | Regime | Exposure |
 |---|---|---|---|---|---|---|---|---|---|---|

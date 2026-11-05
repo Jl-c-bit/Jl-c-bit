@@ -176,6 +176,97 @@ def equity_stats(weights, ret, per):
                 rr=cagr / sd if sd else np.nan, exp=w[per].mean() * 100)
 
 
+
+# ─────────────────────── Regime variants (fewer false alarms) ───────────────────────
+VARIANTS = ['Current regime', '2-week confirmation', 'Hysteresis', '12-month trend', 'Regime + 12-month trend']
+
+
+def load_adjusted(sym):
+    """Alpha Vantage TIME_SERIES_WEEKLY_ADJUSTED: rescale OHLC by adjusted/close so splits AND dividends are included."""
+    path = os.path.join(DATA_DIR, f'{sym}_weekly_adj.csv')
+    if not os.path.exists(path):
+        return None
+    df = pd.read_csv(path, parse_dates=['timestamp']).sort_values('timestamp').reset_index(drop=True)
+    k = df['adjusted close'] / df['close']
+    for col in ('open', 'high', 'low'):
+        df[col] = df[col] * k
+    df['close'] = df['adjusted close']
+    return df[['timestamp', 'open', 'high', 'low', 'close', 'volume']]
+
+
+def regime_states(c, breadth):
+    """Risk-on (True) / risk-off (False) series for each variant; NaN-safe (needs about 3.5 years of history)."""
+    vol = np.log(c / c.shift()).rolling(13).std() * np.sqrt(52) * 100
+    vp = vol.rolling(157).apply(lambda x: (x[:-1] < x[-1]).mean() * 100, raw=True)
+    raw = (breadth >= 50) & (vp <= 80)
+    trend = c > c.shift(52)
+    n = len(c)
+    confirm = np.zeros(n, bool)
+    hyst = np.zeros(n, bool)
+    state_c, state_h, streak = True, True, 0
+    for i in range(n):
+        # 2-week confirmation: switch only after two weeks in a row disagree with the current state
+        streak = streak + 1 if raw[i] != state_c else 0
+        if streak >= 2:
+            state_c, streak = raw[i], 0
+        confirm[i] = state_c
+        # Hysteresis: leave on vol > 80th pct or breadth < 50%; come back only on vol < 60th pct and breadth >= 55%
+        if state_h and (vp[i] > 80 or breadth[i] < 50):
+            state_h = False
+        elif not state_h and vp[i] < 60 and breadth[i] >= 55:
+            state_h = True
+        hyst[i] = state_h
+    out = {'Current regime': raw, '2-week confirmation': pd.Series(confirm), 'Hysteresis': pd.Series(hyst),
+           '12-month trend': trend, 'Regime + 12-month trend': raw & trend}
+    valid = vp.notna() & breadth.notna() & c.shift(52).notna()
+    return out, valid
+
+
+def variants_section(w):
+    w("## 6. Fewer false alarms: regime variants\n")
+    adj = {sym: load_adjusted(sym) for sym in ETFS}
+    if any(v is None for v in adj.values()):
+        w("_Skipped: needs `spy_weekly_adj.csv`, `eem_weekly_adj.csv`, `xle_weekly_adj.csv` (Alpha Vantage TIME_SERIES_WEEKLY_ADJUSTED)._\n")
+        return
+    w("Uses **dividend-adjusted** prices, so buy & hold here includes dividends (unlike sections 1–5). "
+      "Each rule holds 100% when risk-on and 50% when risk-off, and is compared with a fixed exposure equal to its own average. "
+      "Rules were fixed before testing; nothing was tuned on either period.\n")
+    w("- **Current regime**: as in section 4.\n- **2-week confirmation**: switch only after two weeks in a row point the other way.\n"
+      "- **Hysteresis**: go risk-off when volatility passes the 80th percentile or breadth falls below 50%; come back only when volatility is "
+      "below the 60th percentile and breadth is at least 55%.\n- **12-month trend**: risk-on while the price is above its level 52 weeks earlier.\n"
+      "- **Regime + 12-month trend**: risk-on only when both agree.\n")
+    rows, summary = [], {v: dict(sw=[], dd_win=0, ret_win=0, n=0) for v in VARIANTS}
+    for sym in ETFS:
+        df = adj[sym]
+        c, dates = df.close, df.timestamp
+        br = breadth_series(dates)[0]
+        states, valid = regime_states(c, br)
+        ret = c.pct_change().shift(-1)
+        for pn, per in {'Train': valid & (dates < SPLIT_DATE), 'Test': valid & (dates >= SPLIT_DATE)}.items():
+            bh = equity_stats(pd.Series(1.0, index=c.index), ret, per)
+            rows.append([sym.upper(), pn, 'Buy & hold (with dividends)', '–', pct(bh['cagr'], 1), f"{bh['dd']:.0f}%", '–', '–'])
+            for v in VARIANTS:
+                st = states[v].fillna(False).astype(bool)
+                wgt = st.astype(float).where(st, 0.5)
+                a = equity_stats(wgt, ret, per)
+                b = equity_stats(pd.Series(wgt[per].mean(), index=c.index), ret, per)
+                switches = int((st[per] != st[per].shift()).iloc[1:].sum())
+                yrs = per.sum() / 52
+                summary[v]['sw'].append(switches / yrs)
+                summary[v]['dd_win'] += a['dd'] > b['dd']
+                summary[v]['ret_win'] += round(a['cagr'], 1) >= round(b['cagr'], 1)
+                summary[v]['n'] += 1
+                rows.append([sym.upper(), pn, v, f"{switches} ({switches / yrs:.1f}/yr)", pct(a['cagr'], 1), f"{a['dd']:.0f}%",
+                             f"{pct(b['cagr'], 1)} / {b['dd']:.0f}%", f"{wgt[per].mean() * 100:.0f}%"])
+    srows = [[v, f"{np.mean(summary[v]['sw']):.1f}", f"{summary[v]['dd_win']} of {summary[v]['n']}", f"{summary[v]['ret_win']} of {summary[v]['n']}"]
+             for v in VARIANTS]
+    w(md_table(srows, ['Rule', 'Switches per year (avg)', 'Smaller max DD than fixed', 'CAGR ≥ fixed']))
+    w('')
+    w("<details><summary>Every ETF and period</summary>\n")
+    w(md_table(rows, ['ETF', 'Period', 'Rule', 'Switches', 'CAGR', 'Max DD', 'Fixed same avg: CAGR / max DD', 'Avg exposure']))
+    w("\n</details>\n")
+
+
 # ───────────────────────────── Report ─────────────────────────────
 def main():
     splits = []
@@ -369,7 +460,9 @@ def main():
     w("\n</details>\n")
 
     # ── 6. Current readings ──
-    w("## 6. Latest readings\n")
+    variants_section(w)
+
+    w("## 7. Latest readings\n")
     rows = []
     for sym in ETFS:
         d = R[sym]
