@@ -93,29 +93,41 @@ def draw_ring(c, rng, r0, r1, n, kind, fill=None, lw=1.4):
 
 KINDS = ["petal", "double_petal", "dots", "teardrop", "arch", "diamond"]
 
+# Each style changes how big the colouring spaces are and which shapes appear.
+STYLES = {
+    "classic": dict(step=(0.09, 0.16), mult=[1, 1, 2], base=[8, 10, 12, 16], lw=1.6, kinds=KINDS),
+    "easy":    dict(step=(0.17, 0.24), mult=[1], base=[6, 8, 10], lw=2.6, core=0.3, floor=0.2,
+                    kinds=["petal", "dots", "teardrop", "diamond"]),
+    "intricate": dict(step=(0.05, 0.085), mult=[1, 2, 2, 3], base=[12, 16, 20, 24], lw=1.25, kinds=KINDS),
+    "floral":  dict(step=(0.09, 0.15), mult=[1, 2], base=[8, 10, 12], lw=1.6, kinds=["petal", "double_petal", "teardrop", "arch"]),
+}
+STYLE = STYLES["classic"]
+
 
 def draw_mandala(c, cx, cy, radius, rng, palette=None):
     """Draw a full mandala. palette=None -> white fills (colouring page)."""
     c.saveState()
+    c.setLineWidth(max(MIN_LINE, STYLE["lw"] - 0.4))
     c.translate(cx, cy)
     c.setStrokeColor(black)
     # rings from outside in so inner rings sit on top
     edges = [radius]
     r = radius
-    while r > radius * 0.12:
-        r -= radius * rng.uniform(0.09, 0.16)
-        edges.append(max(r, radius * 0.08))
+    core = STYLE.get("core", 0.12)  # stop adding rings once this close to the centre
+    while r > radius * core:
+        r -= radius * rng.uniform(*STYLE["step"])
+        edges.append(max(r, radius * STYLE.get("floor", 0.08)))
     rings = list(zip(edges[1:], edges[:-1]))
-    base_n = rng.choice([8, 10, 12, 16])
+    base_n = rng.choice(STYLE["base"])
     for idx, (r0, r1) in enumerate(rings):
-        n = base_n * rng.choice([1, 1, 2]) if r1 > radius * 0.35 else base_n
-        kind = rng.choice(KINDS)
+        n = base_n * rng.choice(STYLE["mult"]) if r1 > radius * 0.35 else base_n
+        kind = rng.choice(STYLE["kinds"])
         fill = white if palette is None else palette[idx % len(palette)]
         # backing disc so overlaps read cleanly
         c.setFillColor(white if palette is None else palette[(idx + 2) % len(palette)])
-        c.setLineWidth(1.2)
+        c.setLineWidth(max(MIN_LINE, STYLE["lw"] - 0.4))
         c.circle(0, 0, r1, stroke=1, fill=1)
-        draw_ring(c, rng, r0, r1, n, kind, fill=fill, lw=max(MIN_LINE, 1.6 - idx * 0.05))
+        draw_ring(c, rng, r0, r1, n, kind, fill=fill, lw=max(MIN_LINE, STYLE["lw"] - idx * 0.05))
     c.setFillColor(white if palette is None else palette[0])
     c.circle(0, 0, edges[-1], stroke=1, fill=1)
     draw_ring(c, rng, edges[-1] * 0.25, edges[-1] * 0.95, base_n // 2, "petal",
@@ -160,7 +172,7 @@ def build_interior(path, args):
 
 
 # ---------------------------------------------------------------- cover
-PALETTE = [HexColor(h) for h in ["#F2B5D4", "#7BDFF2", "#B2F7EF", "#F7D6E0", "#EFF7F6", "#FFD166", "#9D8DF1"]]
+DEFAULT_PALETTE = "#F2B5D4,#7BDFF2,#B2F7EF,#F7D6E0,#EFF7F6,#FFD166,#9D8DF1"
 
 
 def build_cover(path, args, pages):
@@ -169,7 +181,8 @@ def build_cover(path, args, pages):
     H = TRIM_H + BLEED * 2
     c = canvas.Canvas(path, pagesize=(W, H), initialFontName="Body")
     c.setTitle(args.title + " - cover")
-    bg = HexColor("#2B2D42")
+    PALETTE = [HexColor(h) for h in args.palette.split(",")]
+    bg = HexColor(args.bg)
     c.setFillColor(bg); c.rect(0, 0, W, H, stroke=0, fill=1)
     front_x0 = BLEED + TRIM_W + spine
     rng = random.Random(args.seed + 999)
@@ -209,11 +222,17 @@ def main():
     ap.add_argument("--year", default="2026")
     ap.add_argument("--designs", type=int, default=50)
     ap.add_argument("--seed", type=int, default=2026)
+    ap.add_argument("--style", choices=sorted(STYLES), default="classic")
+    ap.add_argument("--palette", default=DEFAULT_PALETTE, help="comma-separated hex colours for the cover art")
+    ap.add_argument("--bg", default="#2B2D42", help="cover background colour")
+    ap.add_argument("--tagline", default="from bold and simple to rich and detailed.")
     ap.add_argument("--out", default=os.path.join(os.path.dirname(os.path.abspath(__file__)), "out"))
     args = ap.parse_args()
+    global STYLE
+    STYLE = STYLES[args.style]
     args.blurb = ["Slow down, breathe, and colour.",
                   f"{args.designs} original mandala designs,",
-                  "from bold and simple to rich and detailed.",
+                  args.tagline,
                   "",
                   "Single-sided pages - no bleed-through",
                   "Large 8.5 x 11 inch format",
