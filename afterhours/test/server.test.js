@@ -13,7 +13,7 @@ const lobbyWhere = (s, pred) => new Promise((r) => {
 });
 const profile = (over) => ({
   nickname: 'Alex', dob: '1990-01-01', gender: 'man', seeking: ['woman'],
-  intents: ['hookup'], confirmAdult: true, agreeRules: true, ...over,
+  intents: ['hookup'], confirmAdult: true, agreeRules: true, consentData: true, ...over,
 });
 
 test('end-to-end: match, consent to chat, message, safety filters', async (t) => {

@@ -1,6 +1,8 @@
 # Render Blueprint for Afterhours (render.com → New → Blueprint → pick this repo).
 # Creates the web service and a Postgres database and wires them together.
-# You'll be asked to type MOD_PASSWORD (12+ characters) during setup.
+# You'll be asked for MOD_PASSWORD (12+ characters) and the legal-page details
+# (OPERATOR_NAME, CONTACT_EMAIL, GOVERNING_LAW, LEGAL_EFFECTIVE_DATE) during setup.
+# HOSTING_REGION assumes Render's default Oregon region; change it if you pick another.
 services:
   - type: web
     name: afterhours
@@ -17,6 +19,16 @@ services:
           property: connectionString
       - key: MOD_PASSWORD
         sync: false
+      - key: OPERATOR_NAME
+        sync: false
+      - key: CONTACT_EMAIL
+        sync: false
+      - key: GOVERNING_LAW
+        sync: false
+      - key: LEGAL_EFFECTIVE_DATE
+        sync: false
+      - key: HOSTING_REGION
+        value: the United States (Oregon)
       - key: TRUST_PROXY
         value: "1"
       - key: IP_HASH_SECRET

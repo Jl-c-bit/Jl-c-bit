@@ -29,7 +29,10 @@ function clean(str, max) {
 function validateProfile(input, now = new Date()) {
   const p = input || {};
   if (p.confirmAdult !== true) return { ok: false, error: 'You must confirm you are 18 or older.' };
-  if (p.agreeRules !== true) return { ok: false, error: 'You must agree to the community rules.' };
+  if (p.agreeRules !== true) return { ok: false, error: 'You must agree to the Terms of Service.' };
+  if (p.consentData !== true) {
+    return { ok: false, error: 'We need your consent to use your preferences for matching.' };
+  }
 
   const age = ageFromDob(p.dob, now);
   if (age === null) return { ok: false, error: 'Enter a valid date of birth.' };

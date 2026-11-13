@@ -97,3 +97,19 @@ dialog { background: var(--panel); color: var(--text); border: 1px solid var(--b
 dialog::backdrop { background: rgba(0,0,0,.6); }
 
 .notice { display: flex; gap: 1rem; align-items: center; justify-content: space-between; padding: .6rem 1rem; background: #4a3410; border-bottom: 1px solid #c98a1b; }
+
+label.check { align-items: flex-start; }
+label.check input { margin-top: .3rem; flex: none; }
+.legal-links { margin-top: 1rem; }
+@media (max-width: 600px) { .hide-mobile { display: none; } }
+
+.legal { max-width: 760px; margin: 0 auto; padding: 1.5rem 16px 4rem; }
+.legal h1 { font-size: 2rem; }
+.legal h2 { margin-top: 2rem; font-size: 1.25rem; }
+.legal li { margin: .3rem 0; }
+.legal .summary { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: .5rem 1.25rem 1rem; margin: 1.5rem 0; }
+.legal .summary h2 { margin-top: .75rem; }
+.legal table { width: 100%; border-collapse: collapse; font-size: .92rem; display: block; overflow-x: auto; }
+.legal th, .legal td { text-align: left; vertical-align: top; padding: .6rem; border-bottom: 1px solid var(--border); min-width: 150px; }
+.legal th { color: var(--muted); font-weight: 600; }
+mark.unset { background: #ffd34d; color: #000; padding: 0 .25em; border-radius: 3px; font-weight: 600; }

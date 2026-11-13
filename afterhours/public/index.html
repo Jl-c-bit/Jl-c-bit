@@ -18,6 +18,7 @@
       <button id="gate-yes" class="primary">I am 18 or older — enter</button>
       <a class="button ghost" href="https://www.google.com">Leave</a>
     </div>
+    <p class="small muted legal-links">By entering you agree to our <a href="/terms">Terms of Service</a> and <a href="/privacy">Privacy Policy</a>.</p>
   </section>
 
   <!-- Profile / join -->
@@ -64,7 +65,8 @@
         </ul>
       </details>
       <label class="check"><input type="checkbox" name="confirmAdult" required> I confirm I am 18 or older.</label>
-      <label class="check"><input type="checkbox" name="agreeRules" required> I agree to the community rules.</label>
+      <label class="check"><input type="checkbox" name="agreeRules" required> <span>I agree to the community rules and the <a href="/terms" target="_blank">Terms of Service</a>.</span></label>
+      <label class="check"><input type="checkbox" name="consentData" required> <span>I consent to Afterhours using who I'm interested in and what I'm looking for, which may reveal my sexual orientation, to match me with people while I'm online. <a href="/privacy" target="_blank">Privacy Policy</a></span></label>
       <p id="join-error" class="error" role="alert"></p>
       <button class="primary" type="submit">Go online</button>
     </form>
@@ -77,6 +79,8 @@
       <strong>Afterhours</strong>
       <span id="me-label" class="muted"></span>
       <button id="safety-btn" class="ghost small">Meeting safely</button>
+      <a class="small muted hide-mobile" href="/terms" target="_blank">Terms</a>
+      <a class="small muted hide-mobile" href="/privacy" target="_blank">Privacy</a>
     </header>
     <div class="layout">
       <aside class="lobby">

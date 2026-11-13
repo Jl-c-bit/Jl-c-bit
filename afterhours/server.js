@@ -8,6 +8,8 @@ const { Server } = require('socket.io');
 const core = require('./lib/core');
 const { createStore } = require('./lib/store');
 
+const fs = require('fs');
+
 const PORT = Number(process.env.PORT) || 3000;
 // The moderator dashboard is disabled unless a strong password is configured.
 const MOD_PASSWORD = process.env.MOD_PASSWORD || '';
@@ -31,6 +33,31 @@ app.use('/mod', (req, res, next) => {
   res.set({ 'X-Robots-Tag': 'noindex, nofollow', 'Cache-Control': 'no-store' });
   next();
 });
+// Terms and privacy pages: templates in views/ filled from environment variables.
+// Anything not configured shows as a highlighted "[set NAME]" so it can't go live unnoticed.
+const LEGAL_VARS = {
+  OPERATOR_NAME: process.env.OPERATOR_NAME,
+  CONTACT_EMAIL: process.env.CONTACT_EMAIL,
+  GOVERNING_LAW: process.env.GOVERNING_LAW,
+  LEGAL_EFFECTIVE_DATE: process.env.LEGAL_EFFECTIVE_DATE,
+  HOSTING_REGION: process.env.HOSTING_REGION,
+  RETENTION_DAYS: String(require('./lib/store').RETENTION_DAYS),
+};
+const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+function renderLegal(name) {
+  const tpl = fs.readFileSync(path.join(__dirname, 'views', name + '.html'), 'utf8');
+  return tpl.replace(/\{\{(\w+)\}\}/g, (_, key) => {
+    const v = LEGAL_VARS[key];
+    if (!v) return `<mark class="unset">[set ${key}]</mark>`;
+    if (key === 'CONTACT_EMAIL') return `<a href="mailto:${escapeHtml(v)}">${escapeHtml(v)}</a>`;
+    return escapeHtml(v);
+  });
+}
+const legalPages = { terms: renderLegal('terms'), privacy: renderLegal('privacy') };
+for (const name of Object.keys(legalPages)) {
+  app.get([`/${name}`, `/${name}.html`], (req, res) => res.type('html').send(legalPages[name]));
+}
+
 app.use(express.static(path.join(__dirname, 'public')));
 app.get('/healthz', (req, res) => res.send('ok'));
 

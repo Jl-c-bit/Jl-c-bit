@@ -44,6 +44,11 @@ npm test                                         # dashboard: http://localhost:3
 | `DATABASE_URL` | Postgres connection string. Saves bans, reports and the moderation log so they survive restarts. Without it everything is in memory. |
 | `IP_HASH_SECRET` | Optional. Key used to hash IP addresses. If unset, one is generated and kept in the database. |
 | `RETENTION_DAYS` | Optional, default 90. How long closed reports (with chat excerpts) and the activity log are kept. |
+| `OPERATOR_NAME` | Your name or company, shown as the operator / data controller on `/terms` and `/privacy`. |
+| `CONTACT_EMAIL` | Where users send appeals, privacy requests and abuse reports. |
+| `GOVERNING_LAW` | e.g. `England and Wales`, `the State of California`. |
+| `LEGAL_EFFECTIVE_DATE` | e.g. `1 December 2026`. Change it whenever you change the terms. |
+| `HOSTING_REGION` | Where your server/database run, e.g. `the United States (Oregon)`. |
 | `TRUST_PROXY=1` | Set this on Render/Railway/Fly so bans use the visitor's real address, not the host's load balancer. |
 | `PORT` | Set automatically by most hosts. |
 
@@ -68,6 +73,21 @@ to start rather than run without your bans.
 Tests: `TEST_DATABASE_URL=postgres://… npm test` also runs the database tests
 (including restarting the server and checking bans survive). CI does this
 automatically.
+
+## Terms of Service and Privacy Policy
+
+Served at `/terms` and `/privacy` from `views/terms.html` and `views/privacy.html`,
+with your details filled in from the settings above. Anything you haven't set
+shows as a yellow **[set NAME]** on the page so it can't slip through.
+
+The privacy policy describes exactly what the code does (what's kept in
+memory, what's saved, for how long). **If you change how data is handled,
+update `views/privacy.html` in the same change.** Both are plain-English drafts:
+have a lawyer where you operate review them before launch.
+
+Sign-up asks for three separate confirmations: 18+, agreeing to the terms, and
+explicit consent to use "interested in / looking for" for matching (this can
+reveal sexual orientation, which GDPR and similar laws treat as sensitive data).
 
 ## Moderator dashboard (`/mod/`)
 
@@ -110,7 +130,7 @@ This is a working prototype. A real launch needs:
 1. **Real age verification.** Many places (UK Online Safety Act, several US
    states, France, Australia) legally require more than a checkbox for sites
    with sexual content. Use a provider such as Yoti, Veriff, or Persona.
-2. **Terms of service and privacy policy**, and a way to receive abuse reports by email.
+2. **Legal review** of `/terms` and `/privacy`, and a monitored `CONTACT_EMAIL` inbox.
 3. **Human moderation** and a process to report child exploitation to NCMEC
    (US) / IWF (UK) if it ever appears.
 4. **Individual moderator accounts** instead of one shared password, once you have more than a couple of moderators.

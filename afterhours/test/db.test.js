@@ -14,7 +14,7 @@ const once = (s, ev) => new Promise((r) => s.once(ev, r));
 const emit = (s, ev, data) => new Promise((r) => s.emit(ev, data, r));
 const profile = (over) => ({
   nickname: 'Alex', dob: '1990-01-01', gender: 'man', seeking: ['woman'],
-  intents: ['hookup'], confirmAdult: true, agreeRules: true, ...over,
+  intents: ['hookup'], confirmAdult: true, agreeRules: true, consentData: true, ...over,
 });
 
 async function resetDb() {

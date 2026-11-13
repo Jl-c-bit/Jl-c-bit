@@ -36,6 +36,7 @@
       bio: fd.get('bio'),
       confirmAdult: f.confirmAdult.checked,
       agreeRules: f.agreeRules.checked,
+      consentData: f.consentData.checked,
     };
     $('#join-error').textContent = '';
     if (!socket.connected) socket.connect();

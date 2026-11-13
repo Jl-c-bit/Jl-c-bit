@@ -6,7 +6,7 @@ const core = require('../lib/core');
 const NOW = new Date('2026-11-13T12:00:00Z');
 const base = {
   nickname: 'Nightowl', dob: '1995-05-05', gender: 'woman', seeking: ['man'],
-  intents: ['hookup'], confirmAdult: true, agreeRules: true,
+  intents: ['hookup'], confirmAdult: true, agreeRules: true, consentData: true,
 };
 
 test('age is computed correctly around birthdays', () => {
@@ -71,4 +71,10 @@ test('rate limiter', () => {
   assert.ok(allow('x', 1));
   assert.ok(!allow('x', 2));
   assert.ok(allow('x', 1500));
+});
+
+test('explicit consent to use preferences is required', () => {
+  const r = core.validateProfile({ ...base, consentData: false }, NOW);
+  assert.equal(r.ok, false);
+  assert.match(r.error, /consent/);
 });
