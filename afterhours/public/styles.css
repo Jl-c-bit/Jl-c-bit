@@ -119,3 +119,10 @@ mark.unset { background: #ffd34d; color: #000; padding: 0 .25em; border-radius: 
 button.bank { width: 100%; display: flex; align-items: center; gap: .75rem; border-radius: 10px; text-align: left; padding: .7rem 1rem; }
 button.bank:hover:not(:disabled) { border-color: var(--accent); }
 button.bank img { width: 28px; height: 28px; object-fit: contain; border-radius: 6px; background: #fff; flex: none; }
+
+.method { background: var(--panel-2); border: 1px solid var(--border); border-radius: var(--radius); padding: .9rem 1rem .4rem; }
+.method h3 { margin: 0 0 .25rem; display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
+.method .tag { font-weight: 400; }
+.method .banks { margin-bottom: .6rem; }
+button.wide { width: 100%; }
+.or { text-align: center; color: var(--muted); margin: .6rem 0; font-size: .85rem; }

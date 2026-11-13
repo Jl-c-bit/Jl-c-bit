@@ -153,8 +153,12 @@
     db.className = 'pill ' + (state.persistent ? 'live' : 'down');
     db.textContent = state.persistent ? 'saved to database' : 'no database';
     $('#age-pill').hidden = false;
-    $('#age-pill').className = 'pill ' + (state.ageCheck === 'connectid' ? 'live' : 'down');
-    $('#age-pill').textContent = { connectid: 'age check: ConnectID', mock: 'age check: PRETEND BANK', none: 'age check: self-declared' }[state.ageCheck] || state.ageCheck;
+    const checks = state.ageCheck || [];
+    const real = checks.filter((c) => c === 'yoti' || c === 'connectid');
+    $('#age-pill').className = 'pill ' + (real.length && real.length === checks.length ? 'live' : 'down');
+    $('#age-pill').textContent = !checks.length
+      ? 'age check: self-declared'
+      : 'age check: ' + checks.map((c) => ({ yoti: 'Yoti selfie', connectid: 'ConnectID', 'mock-bank': 'PRETEND bank', 'mock-selfie': 'PRETEND selfie' })[c] || c).join(' + ');
     db.title = state.persistent ? '' : 'Bans and reports will be lost when the server restarts. Set DATABASE_URL.';
     $('#persist-note').textContent = state.persistent
       ? ' Bans are saved and survive restarts.'

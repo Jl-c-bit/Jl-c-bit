@@ -59,10 +59,17 @@
         <td>Needed to connect you, and to enforce bans.</td>
         <td>Never stored. We keep a one-way keyed hash (a scrambled code) for active bans and reports, which can't be turned back into your address.</td>
       </tr>
-      <!--if:BANK_AGE_CHECK-->
+      <!--if:FACE_AGE_CHECK-->
       <tr>
-        <td><strong>Age check result</strong> (via ConnectID and your bank)</td>
-        <td>To confirm you are 18+ before you can go online. We ask your bank only whether you are over 18. We don't request or receive your name, date of birth, address, or any account details.</td>
+        <td><strong>Selfie for the age check</strong> (taken and processed by Yoti, not us)</td>
+        <td>To estimate whether you look old enough ({{YOTI_THRESHOLD}}+) to confirm you are an adult. Yoti checks that a real person is present and estimates age from the image. It doesn't identify you or match your face against anyone.</td>
+        <td>We never receive the image. Yoti deletes it once the estimate is made. We receive only pass or fail.</td>
+      </tr>
+      <!--endif-->
+      <!--if:ANY_AGE_CHECK-->
+      <tr>
+        <td><strong>Age check result</strong> (yes or no)</td>
+        <td>To confirm you are 18+ before you can go online.<!--if:BANK_AGE_CHECK--> With the bank check, we ask your bank only whether you are over 18. We don't request or receive your name, date of birth, address, or any account details.<!--endif--></td>
         <td>Not stored on our servers. Your browser keeps a signed "18+ confirmed" cookie for {{AGE_PASS_HOURS}} hours so you don't have to repeat the check.</td>
       </tr>
       <!--endif-->
@@ -89,6 +96,9 @@
     <li><strong>The person you chat with</strong> sees your messages. Remember they could screenshot them. That breaks our rules, but we can't technically prevent it.</li>
     <li><strong>Moderators</strong> can see everyone online and their profiles, plus reports and their chat excerpts. They never see your IP address, only the first 8 characters of its hash. Moderators can't read chats that haven't been reported.</li>
     <li><strong>Service providers</strong> who run the site for us: our hosting and database provider, located in {{HOSTING_REGION}}.</li>
+    <!--if:FACE_AGE_CHECK-->
+    <li><strong>Yoti.</strong> If you choose the selfie check, Yoti Ltd takes and processes your selfie to estimate your age, under its own privacy policy. A face image is biometric information, which the Privacy Act treats as sensitive. Yoti asks for your consent on its page before taking the photo, and it may process the image outside Australia. Yoti doesn't tell us anything except whether you passed.</li>
+    <!--endif-->
     <!--if:BANK_AGE_CHECK-->
     <li><strong>ConnectID and your bank.</strong> We use ConnectID (operated by eftpos Digital Identity Pty Ltd, part of Australian Payments Plus) to check your age. You choose your bank (or ConnectID's document-check option), sign in there, and approve sharing whether you are over 18. <strong>Your bank and ConnectID will know that Afterhours asked to verify your age</strong>, and they handle that under their own privacy policies. We never see your banking login.</li>
     <!--endif-->
@@ -116,7 +126,7 @@
   </ul>
 
   <h2>5. Cookies and tracking</h2>
-  <p>We don't use analytics, advertising trackers, or tracking cookies.<!--if:BANK_AGE_CHECK--> We use two strictly necessary cookies for the age check: one that links your browser to the check while you're at your bank (deleted when you return, or after 10 minutes), and the signed "18+ confirmed" cookie described above ({{AGE_PASS_HOURS}} hours). Neither identifies you.<!--endif--> Moderators' browsers keep their sign-in for the current tab only (session storage), which is cleared when the tab closes.</p>
+  <p>We don't use analytics, advertising trackers, or tracking cookies.<!--if:ANY_AGE_CHECK--> We use two strictly necessary cookies for the age check: one that links your browser to the check while you're with the age-check provider (deleted when you return, or after 10 minutes), and the signed "18+ confirmed" cookie described above ({{AGE_PASS_HOURS}} hours). Neither identifies you.<!--endif--> Moderators' browsers keep their sign-in for the current tab only (session storage), which is cleared when the tab closes.</p>
 
   <h2>6. Security</h2>
   <p>Connections are encrypted (HTTPS). Moderator access is password-protected and rate-limited. Network addresses are hashed with a secret key before anything is stored, and stored data is limited to what's listed above. No system is perfectly secure. If we have a data breach that puts you at risk, we'll tell the relevant authorities and, where we can, you.</p>

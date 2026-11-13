@@ -74,22 +74,50 @@ Tests: `TEST_DATABASE_URL=postgres://… npm test` also runs the database tests
 (including restarting the server and checking bans survive). CI does this
 automatically.
 
-## Age verification (ConnectID)
+## Age verification (Yoti selfie and/or ConnectID bank check)
 
-People can prove they're 18+ through their own bank using
-[ConnectID](https://connectid.com.au) (Australian Payments Plus). Afterhours asks
-for exactly one claim, `over18`, and gets back yes or no — never a name, date
-of birth or account details. A "yes" gives the browser a signed cookie valid
-for 12 hours (`AGE_PASS_HOURS`); nothing is stored on the server. Joining is
-refused without it.
+Before anyone can go online they prove they're 18+ with an outside provider.
+Afterhours only ever learns **yes or no**: never a name, date of birth, photo
+or bank details. A "yes" gives the browser a signed cookie valid for 12 hours
+(`AGE_PASS_HOURS`); nothing is stored on the server.
 
-| `AGE_VERIFICATION` | What happens |
+`AGE_VERIFICATION` is a comma-separated list; people see the options in that
+order and pick one. Recommended: **`yoti,connectid`**.
+
+| Method | Experience | What a "no" means |
+|---|---|---|
+| `yoti` | Selfie on Yoti's page, ~10 seconds. Image deleted straight away. | "Doesn't look 25+" — **not** proof of being under 18, so the person is offered the bank check instead. |
+| `connectid` | Log in to own bank and approve, ~1 minute. The bank sees that Afterhours asked. | Bank says under 18 → refused, logged for moderators. |
+| `mock` | Pretend selfie + pretend bank, for development and tests. Refused when `NODE_ENV=production`. | — |
+| `none` (default) | Self-declared date of birth only. | — |
+
+**Why 25 for the selfie?** Face age estimates have an error margin of a couple
+of years, so checking "looks 25+" makes it very unlikely a 16- or 17-year-old
+passes ("Challenge 25", the same rule used for alcohol). Real 18–24-year-olds
+use the bank check. `YOTI_THRESHOLD` changes it (minimum 18 — don't lower it
+without advice).
+
+Try it locally: `AGE_VERIFICATION=mock npm start`.
+
+### Going live with Yoti
+
+1. Create a **Yoti Hub** account (hub.yoti.com) as a business and set up an
+   *Age Verification* integration. Ask Yoti for pricing (per check) and tell them
+   it's an 18+ dating site using **age estimation only**.
+2. From the Hub, copy your **SDK ID** and **API key**.
+3. Ask Yoti to allow your callback address,
+   `https://YOUR-DOMAIN/verify/callback` (some callback options need their
+   support team to switch on).
+4. Set:
+
+| Setting | Value |
 |---|---|
-| `none` (default) | Self-declared date of birth only. |
-| `mock` | A **pretend bank** for development and tests. Refused when `NODE_ENV=production`. |
-| `connectid` | Real bank checks. Needs the ConnectID SDK and the settings below. |
-
-Try it locally: `AGE_VERIFICATION=mock npm start`, then click through.
+| `AGE_VERIFICATION` | `yoti` (or `yoti,connectid`) |
+| `YOTI_SDK_ID` | From the Yoti Hub |
+| `YOTI_API_KEY` | From the Yoti Hub (secret) |
+| `PUBLIC_URL` | Your site's address, e.g. `https://afterhours.com.au`. Not needed on Render (it's detected). |
+| `YOTI_THRESHOLD` | Optional, default `25` |
+| `YOTI_API_BASE`, `YOTI_USER_VIEW_URL` | Only for Yoti's sandbox — use the URLs Yoti gives you |
 
 ### Going live with ConnectID
 
@@ -103,13 +131,14 @@ Try it locally: `AGE_VERIFICATION=mock npm start`, then click through.
    `https://YOUR-DOMAIN/verify/callback`.
 3. **Install the SDK** — only once you're an approved participant (its licence
    requires it): `npm install @connectid-tools/rp-nodejs-sdk`. On Render the
-   build command already does this automatically when `AGE_VERIFICATION=connectid`.
+   build command already does this automatically when `AGE_VERIFICATION`
+   includes `connectid`.
 4. **Set these** (Render → Environment; put certificates and keys in as
    secret values — paste the PEM text, `\n` line breaks are fine):
 
 | Setting | From the ConnectID directory |
 |---|---|
-| `AGE_VERIFICATION` | `connectid` |
+| `AGE_VERIFICATION` | `connectid` (or `yoti,connectid`) |
 | `CONNECTID_CLIENT_ID` | Software Statement → Client Details → Client ID |
 | `CONNECTID_SIGNING_KID` | Software Statement → Certificates → signing key id |
 | `CONNECTID_SIGNING_KEY`, `CONNECTID_SIGNING_PEM` | Your signing key and certificate |
@@ -121,14 +150,15 @@ Try it locally: `AGE_VERIFICATION=mock npm start`, then click through.
 
    Each certificate/key setting also accepts a file path via `…_FILE`
    (e.g. `CONNECTID_SIGNING_KEY_FILE=/etc/secrets/signing.key`).
-5. The server checks everything at startup and refuses to start if the SDK or
-   a setting is missing, rather than silently running without age checks.
-   The moderator dashboard shows which age check is active.
 
-When bank checks are on, `/privacy` and `/terms` automatically gain sections
-explaining ConnectID, the cookie, and that **the person's bank will see that
-Afterhours asked** — worth knowing for a site like this, and something some
-users will care about.
+### Either way
+
+- The server checks the settings at startup and **refuses to start** if
+  something is missing, rather than silently running without age checks.
+  The moderator dashboard shows which checks are active.
+- `/privacy` and `/terms` automatically gain sections for whichever methods
+  are on (Yoti processing a face image — biometric, sensitive under the
+  Privacy Act; ConnectID and the bank seeing that Afterhours asked).
 
 ## Terms of Service and Privacy Policy
 
@@ -195,9 +225,9 @@ privacy law to review it.
 **Online Safety Act (eSafety Commissioner)**
 3. **Age assurance.** The registered online safety industry codes cover
    dating services, and eSafety's position is that self-declared ages aren't
-   effective. ConnectID bank checks are built in (see *Age verification*
-   above) — finish ConnectID onboarding and set `AGE_VERIFICATION=connectid`
-   before launch.
+   effective. Yoti selfie checks and ConnectID bank checks are built in (see
+   *Age verification* above) — finish onboarding with one or both and set
+   `AGE_VERIFICATION` before launch.
 4. **Read the codes that apply to you** in eSafety's *Online Safety Codes and
    Standards Regulatory Guidance* (Sept 2026) and the Basic Online Safety
    Expectations guidance. Most of what they ask — reporting tools, terms

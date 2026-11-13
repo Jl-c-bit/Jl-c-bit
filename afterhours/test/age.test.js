@@ -4,7 +4,7 @@ const test = require('node:test');
 const assert = require('node:assert');
 const { io: client } = require('socket.io-client');
 const { server, io, ready } = require('../server');
-const { makePassSigner, createProvider } = require('../lib/age-verification');
+const { makePassSigner, createProviders } = require('../lib/age-verification');
 
 const profile = (over) => ({
   nickname: 'Alex', dob: '1990-01-01', gender: 'man', seeking: ['woman'],
@@ -39,9 +39,9 @@ function browser(base) {
   };
 }
 
-async function verifyVia(b, button) {
-  const start = await (await b.post('/verify/start', { bankId: 'mock-bank' })).json();
-  assert.match(start.authUrl, /^\/verify\/mock-bank/);
+async function verifyVia(b, button, method = 'mock-bank', optionId = 'mock-bank') {
+  const start = await (await b.post('/verify/start', { method, optionId })).json();
+  assert.match(start.authUrl, /^\/verify\/mock\?/);
   const page = await (await b.get(start.authUrl)).text();
   const href = page.match(new RegExp(`id="${button}" href="([^"]+)"`))[1].replace(/&amp;/g, '&');
   const cb = await b.get(href);
@@ -64,7 +64,7 @@ test('bank age check (pretend bank)', async (t) => {
   await t.test('joining without verifying is refused', async () => {
     const b = browser(base);
     const st = await (await b.get('/verify/status')).json();
-    assert.deepEqual(st, { required: true, provider: 'mock', verified: false });
+    assert.deepEqual(st, { required: true, methods: ['mock-selfie', 'mock-bank'], verified: false });
     const r = await emit(connect(), 'join', profile());
     assert.equal(r.ok, false);
     assert.equal(r.needsVerification, true);
@@ -72,8 +72,11 @@ test('bank age check (pretend bank)', async (t) => {
 
   await t.test('bank confirms 18+ → pass cookie → can join', async () => {
     const b = browser(base);
-    const banks = (await (await b.get('/verify/banks')).json()).banks;
-    assert.ok(banks.some((x) => x.id === 'mock-bank') && banks.some((x) => x.fallback));
+    const methods = (await (await b.get('/verify/options')).json()).methods;
+    assert.deepEqual(methods.map((m) => m.kind), ['selfie', 'bank']);
+    assert.equal(methods[0].threshold, 25);
+    const bank = methods[1].options;
+    assert.ok(bank.some((x) => x.id === 'mock-bank') && bank.some((x) => x.fallback));
     assert.equal(await verifyVia(b, 'mock-yes'), '/?age=verified');
     assert.ok(b.jar.has('ah_age'), 'pass cookie set');
     assert.ok(!b.jar.has('ah_age_state'), 'state cookie cleared');
@@ -88,6 +91,14 @@ test('bank age check (pretend bank)', async (t) => {
     assert.ok(!b.jar.has('ah_age'));
   });
 
+  await t.test("selfie that doesn't look 25+ is 'not confirmed', not 'under 18'", async () => {
+    const b = browser(base);
+    assert.equal(await verifyVia(b, 'mock-no', 'mock-selfie', 'fae'), '/?age=notconfirmed');
+    assert.ok(!b.jar.has('ah_age'));
+    assert.equal(await verifyVia(b, 'mock-yes', 'mock-selfie', 'fae'), '/?age=verified');
+    assert.ok(b.jar.has('ah_age'));
+  });
+
   await t.test('cancelling at the bank', async () => {
     const b = browser(base);
     assert.equal(await verifyVia(b, 'mock-cancel'), '/?age=cancelled');
@@ -96,7 +107,7 @@ test('bank age check (pretend bank)', async (t) => {
 
   await t.test("someone else's callback link doesn't work in your browser", async () => {
     const victim = browser(base), attacker = browser(base);
-    const start = await (await attacker.post('/verify/start', { bankId: 'mock-bank' })).json();
+    const start = await (await attacker.post('/verify/start', { method: 'mock-bank', optionId: 'mock-bank' })).json();
     const page = await (await attacker.get(start.authUrl)).text();
     const href = page.match(/id="mock-yes" href="([^"]+)"/)[1].replace(/&amp;/g, '&');
     const cb = await victim.get(href); // victim has no matching state cookie
@@ -106,7 +117,7 @@ test('bank age check (pretend bank)', async (t) => {
 
   await t.test('a code can only be used once', async () => {
     const b = browser(base);
-    const start = await (await b.post('/verify/start', { bankId: 'mock-bank' })).json();
+    const start = await (await b.post('/verify/start', { method: 'mock-bank', optionId: 'mock-bank' })).json();
     const page = await (await b.get(start.authUrl)).text();
     const href = page.match(/id="mock-yes" href="([^"]+)"/)[1].replace(/&amp;/g, '&');
     assert.equal((await b.get(href)).headers.get('location'), '/?age=verified');
@@ -122,15 +133,16 @@ test('bank age check (pretend bank)', async (t) => {
   await t.test('legal pages describe the bank check when it is on', async () => {
     const privacy = await (await fetch(base + '/privacy')).text();
     const terms = await (await fetch(base + '/terms')).text();
-    assert.ok(privacy.includes('ConnectID and your bank') && privacy.includes('12 hours'));
-    assert.ok(terms.includes('your <strong>own</strong> bank login'));
+    assert.ok(privacy.includes('ConnectID and your bank') && privacy.includes('Yoti Ltd') && privacy.includes('12 hours'));
+    assert.ok(terms.includes('complete the check <strong>yourself</strong>') && terms.includes('selfie age check by Yoti'));
     assert.ok(!privacy.includes('<!--if:'), 'markers removed');
   });
 
-  await t.test('start rejects unknown banks and non-JSON posts', async () => {
+  await t.test('start rejects unknown methods/options and non-JSON posts', async () => {
     const b = browser(base);
-    assert.equal((await b.post('/verify/start', { bankId: 'evil' })).status, 400);
-    assert.equal((await b.post('/verify/start', { bankId: 'mock-bank' }, 'text/plain')).status, 415);
+    assert.equal((await b.post('/verify/start', { method: 'mock-bank', optionId: 'evil' })).status, 400);
+    assert.equal((await b.post('/verify/start', { method: 'evil', optionId: 'fae' })).status, 400);
+    assert.equal((await b.post('/verify/start', { method: 'mock-bank', optionId: 'mock-bank' }, 'text/plain')).status, 415);
   });
 });
 
@@ -147,10 +159,16 @@ test('pass signer: expiry and tampering', () => {
 });
 
 test('provider selection', () => {
-  assert.equal(createProvider({}), null);
-  assert.throws(() => createProvider({ AGE_VERIFICATION: 'mock', NODE_ENV: 'production' }), /cannot be used in production/);
-  assert.throws(() => createProvider({ AGE_VERIFICATION: 'connectid' }), /missing settings: CONNECTID_CLIENT_ID/);
-  assert.throws(() => createProvider({ AGE_VERIFICATION: 'bogus' }), /Unknown AGE_VERIFICATION/);
+  assert.deepEqual(createProviders({}), []);
+  assert.deepEqual(createProviders({ AGE_VERIFICATION: 'none' }), []);
+  assert.throws(() => createProviders({ AGE_VERIFICATION: 'mock', NODE_ENV: 'production' }), /cannot be used in production/);
+  assert.throws(() => createProviders({ AGE_VERIFICATION: 'connectid' }), /missing settings: CONNECTID_CLIENT_ID/);
+  assert.throws(() => createProviders({ AGE_VERIFICATION: 'yoti' }), /Yoti is missing settings: YOTI_SDK_ID, YOTI_API_KEY, PUBLIC_URL/);
+  assert.throws(() => createProviders({ AGE_VERIFICATION: 'yoti', YOTI_SDK_ID: 'a', YOTI_API_KEY: 'b', PUBLIC_URL: 'c', YOTI_THRESHOLD: '16' }), /18 or more/);
+  assert.throws(() => createProviders({ AGE_VERIFICATION: 'bogus' }), /Unknown AGE_VERIFICATION/);
+  const both = createProviders({ AGE_VERIFICATION: ' Yoti , mock-bank ', YOTI_SDK_ID: 'a', YOTI_API_KEY: 'b', PUBLIC_URL: 'c' });
+  assert.deepEqual(both.map((p) => p.name), ['yoti', 'mock-bank'], 'order kept, case/space tolerant');
+  assert.doesNotThrow(() => createProviders({ AGE_VERIFICATION: 'yoti', YOTI_SDK_ID: 'a', YOTI_API_KEY: 'b', RENDER_EXTERNAL_URL: 'https://x.onrender.com' }), 'PUBLIC_URL detected on Render');
 });
 
 test('connectid provider explains a missing SDK instead of crashing', async () => {
@@ -159,6 +177,6 @@ test('connectid provider explains a missing SDK instead of crashing', async () =
     CONNECTID_REDIRECT_URI: 'https://example.com/verify/callback', CONNECTID_REGISTRY_URI: 'https://example.com/participants',
     CONNECTID_SIGNING_KEY: 'a', CONNECTID_SIGNING_PEM: 'b', CONNECTID_TRANSPORT_KEY: 'c', CONNECTID_TRANSPORT_PEM: 'd', CONNECTID_CA_PEM: 'e',
   };
-  const p = createProvider(env);
+  const [p] = createProviders(env);
   await assert.rejects(p.check(), /npm install @connectid-tools\/rp-nodejs-sdk/);
 });

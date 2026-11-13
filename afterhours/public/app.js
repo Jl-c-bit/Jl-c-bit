@@ -29,63 +29,120 @@
     }
   }
 
-  function bankButton(b) {
-    const li = document.createElement('li');
+  let ageMethods = [];
+
+  async function startCheck(method, optionId) {
+    for (const x of document.querySelectorAll('#methods button')) x.disabled = true;
+    $('#verify-msg').textContent = '';
+    try {
+      const res = await fetch('/verify/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ method, optionId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'That check is unavailable right now.');
+      location.assign(data.authUrl);
+    } catch (err) {
+      $('#verify-msg').textContent = err.message;
+      for (const x of document.querySelectorAll('#methods button')) x.disabled = false;
+    }
+  }
+
+  function optionButton(method, o, cls = 'bank') {
     const btn = document.createElement('button');
-    btn.className = 'bank';
+    btn.className = cls;
     btn.type = 'button';
-    if (b.logo) {
+    if (o.logo) {
       const img = document.createElement('img');
-      img.src = b.logo;
+      img.src = o.logo;
       img.alt = '';
       img.loading = 'lazy';
       btn.append(img);
     }
-    btn.append(document.createTextNode(b.name));
-    btn.addEventListener('click', async () => {
-      for (const x of document.querySelectorAll('.bank')) x.disabled = true;
-      $('#verify-msg').textContent = '';
-      try {
-        const res = await fetch('/verify/start', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ bankId: b.id }),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Could not reach your bank.');
-        location.assign(data.authUrl);
-      } catch (err) {
-        $('#verify-msg').textContent = err.message;
-        for (const x of document.querySelectorAll('.bank')) x.disabled = false;
-      }
-    });
+    btn.append(document.createTextNode(o.name));
+    btn.addEventListener('click', () => startCheck(method, o.id));
+    const li = document.createElement('li');
     li.append(btn);
     return li;
   }
 
-  async function showVerify(message = '') {
+  function methodCard(m) {
+    const card = document.createElement('section');
+    card.className = 'method';
+    card.dataset.kind = m.kind;
+    const h = document.createElement('h3');
+    const p = document.createElement('p');
+    p.className = 'small';
+    if (m.kind === 'selfie') {
+      h.innerHTML = 'Quick selfie check <span class="tag">about 10 seconds</span>';
+      p.textContent = `Yoti estimates your age from a selfie, then deletes the image straight away. You need to look ${m.threshold} or older. If you're younger than that, use your bank instead.`;
+    } else {
+      h.innerHTML = 'Check with your bank <span class="tag">about a minute</span>';
+      p.textContent = "Using ConnectID, you log in to your own bank and approve sharing one fact: that you're over 18. Your bank will see that Afterhours asked.";
+    }
+    card.append(h, p);
+    if (m.unavailable || !m.options.length) {
+      const e = document.createElement('p');
+      e.className = 'muted small';
+      e.textContent = 'Unavailable right now. Please try again shortly.';
+      card.append(e);
+      return card;
+    }
+    const main = m.options.filter((o) => !o.fallback).sort((a, b) => a.name.localeCompare(b.name));
+    const fallback = m.options.filter((o) => o.fallback);
+    const ul = document.createElement('ul');
+    ul.className = 'banks';
+    if (m.kind === 'selfie') {
+      main.forEach((o) => ul.append(optionButton(m.method, { ...o, name: 'Start selfie check' }, 'primary wide')));
+    } else {
+      const label = document.createElement('p');
+      label.className = 'small muted';
+      label.textContent = 'Choose your bank';
+      card.append(label);
+      main.forEach((o) => ul.append(optionButton(m.method, o)));
+    }
+    card.append(ul);
+    if (fallback.length) {
+      const fp = document.createElement('p');
+      fp.className = 'small muted';
+      fp.textContent = 'Bank not listed?';
+      const ful = document.createElement('ul');
+      ful.className = 'banks';
+      fallback.forEach((o) => ful.append(optionButton(m.method, o)));
+      card.append(fp, ful);
+    }
+    return card;
+  }
+
+  async function showVerify(message = '', { prefer } = {}) {
     show('verify');
     $('#verify-msg').textContent = message;
-    const ul = $('#banks');
+    const box = $('#methods');
     try {
-      const res = await fetch('/verify/banks', { cache: 'no-store' });
+      const res = await fetch('/verify/options', { cache: 'no-store' });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      ul.textContent = '';
-      const main = data.banks.filter((b) => !b.fallback);
-      const fallback = data.banks.filter((b) => b.fallback);
-      main.sort((a, b) => a.name.localeCompare(b.name)).forEach((b) => ul.append(bankButton(b)));
-      if (!main.length) ul.innerHTML = '<li class="muted small">No banks are available right now.</li>';
-      $('#fallback').textContent = '';
-      fallback.forEach((b) => $('#fallback').append(bankButton(b)));
-      $('#fallback-wrap').hidden = !fallback.length;
+      ageMethods = data.methods;
+      const ordered = prefer ? [...ageMethods].sort((a, b) => (b.kind === prefer) - (a.kind === prefer)) : ageMethods;
+      box.textContent = '';
+      ordered.forEach((m, i) => {
+        if (i > 0) {
+          const or = document.createElement('p');
+          or.className = 'or';
+          or.textContent = 'or';
+          box.append(or);
+        }
+        box.append(methodCard(m));
+      });
     } catch (err) {
-      ul.innerHTML = '';
-      const li = document.createElement('li');
-      li.className = 'error';
-      li.textContent = err.message || 'Age verification is unavailable right now.';
-      ul.append(li);
+      box.textContent = '';
+      const p = document.createElement('p');
+      p.className = 'error';
+      p.textContent = err.message || 'Age checks are unavailable right now.';
+      box.append(p);
     }
+    return ageMethods;
   }
 
   async function enter() {
@@ -318,7 +375,7 @@
 
   // Coming back from the bank.
   const AGE_MESSAGES = {
-    cancelled: 'You cancelled at your bank. You need to confirm you are 18+ to use Afterhours.',
+    cancelled: 'The check was cancelled. You need to confirm you are 18+ to use Afterhours.',
     failed: "We couldn't confirm your age. Please try again, or choose another option.",
     expired: 'That took too long or was started in another browser. Please try again.',
   };
@@ -329,9 +386,17 @@
     if (ageResult === 'verified') {
       showJoin();
       $('#join-error').textContent = '';
-      $('#join .muted').insertAdjacentHTML('beforebegin', '<p class="ok">✓ Your bank confirmed you are 18+.</p>');
+      $('#join .muted').insertAdjacentHTML('beforebegin', '<p class="ok">✓ Age confirmed: you are 18+.</p>');
+    } else if (ageResult === 'notconfirmed') {
+      showVerify('', { prefer: 'bank' }).then((methods) => {
+        const bank = methods.some((m) => m.kind === 'bank');
+        const t = (methods.find((m) => m.kind === 'selfie') || {}).threshold || 25;
+        $('#verify-msg').textContent = bank
+          ? `The selfie check couldn't confirm you look ${t} or older. That's common if you're under ${t}. Please confirm with your bank instead.`
+          : `The selfie check couldn't confirm you look ${t} or older, so we can't let you in. If you think this is wrong, contact us (see Terms).`;
+      });
     } else if (ageResult === 'under18') {
-      document.body.innerHTML = '<div class="card narrow"><h2>Afterhours is for adults only</h2><p>Your bank told us you are under 18, so you can\'t use this site.</p><p>If you need someone to talk to, Kids Helpline is free and confidential: <strong>1800 55 1800</strong> or <a href="https://kidshelpline.com.au">kidshelpline.com.au</a>.</p></div>';
+      document.body.innerHTML = '<div class="card narrow"><h2>Afterhours is for adults only</h2><p>Your age check showed you are under 18, so you can\'t use this site.</p><p>If you need someone to talk to, Kids Helpline is free and confidential: <strong>1800 55 1800</strong> or <a href="https://kidshelpline.com.au">kidshelpline.com.au</a>.</p></div>';
     } else {
       showVerify(AGE_MESSAGES[ageResult] || AGE_MESSAGES.failed);
     }

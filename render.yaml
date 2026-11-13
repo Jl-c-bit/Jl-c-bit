@@ -10,11 +10,11 @@ services:
     rootDir: afterhours
     plan: free
     region: singapore   # closest Render region to Australia
-    # The ConnectID SDK is only installed once you switch AGE_VERIFICATION to connectid
+    # The ConnectID SDK is only installed once AGE_VERIFICATION includes connectid
     # (its licence is for approved ConnectID participants).
     buildCommand: >-
       npm ci --omit=dev --no-audit --no-fund &&
-      if [ "$AGE_VERIFICATION" = "connectid" ]; then npm install --no-save --no-audit --no-fund @connectid-tools/rp-nodejs-sdk@6.1.0; fi
+      if echo "$AGE_VERIFICATION" | grep -qi connectid; then npm install --no-save --no-audit --no-fund @connectid-tools/rp-nodejs-sdk@6.1.0; fi
     startCommand: npm start
     healthCheckPath: /healthz
     envVars:
@@ -34,8 +34,9 @@ services:
         sync: false
       - key: HOSTING_REGION
         value: Singapore
-      # Change to "connectid" after ConnectID onboarding, and add the CONNECTID_* settings
-      # listed in afterhours/README.md as secret environment variables.
+      # Change to "yoti", "connectid" or "yoti,connectid" once onboarded, and add the
+      # YOTI_* / CONNECTID_* settings listed in afterhours/README.md as secret variables.
+      # (PUBLIC_URL is picked up automatically from Render.)
       - key: AGE_VERIFICATION
         value: none
       - key: TRUST_PROXY

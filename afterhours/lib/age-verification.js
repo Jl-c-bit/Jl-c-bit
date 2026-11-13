@@ -1,20 +1,24 @@
 'use strict';
 
-// Bank-backed 18+ checks via ConnectID (Australian Payments Plus).
+// 18+ checks with an outside provider, before anyone can go online.
 //
-// Flow: the person picks their bank → we send a Pushed Authorisation Request
-// asking for ONE claim, `over18` → they approve at their bank → the bank sends
-// them back to /verify/callback → we read over18 from the verified ID token →
-// we give the browser a signed "age-verified" pass (a cookie) for a few hours.
+// Two real methods, which can be offered side by side so people can choose:
 //
-// We never ask for or receive name, date of birth, address or any identifier
-// we keep. Nothing from the bank is stored.
+//   yoti      – Yoti facial age estimation. The person takes a selfie on Yoti's
+//               page; Yoti estimates their age, deletes the image, and tells us
+//               only whether they passed our threshold (default: looks 25+).
+//   connectid – ConnectID (Australian Payments Plus). The person approves at their
+//               own bank, which tells us only whether they are over 18.
 //
-// AGE_VERIFICATION selects the provider:
-//   none      – (default) self-declared date of birth only
-//   connectid – real ConnectID. Needs @connectid-tools/rp-nodejs-sdk installed and
-//               CONNECTID_* settings; only approved ConnectID participants may use the SDK.
-//   mock      – a pretend bank for local development and tests. Refused in production.
+// Either way we receive yes/no, store nothing on the server, and give the
+// browser a signed "18+ confirmed" pass (a cookie) for a few hours.
+//
+// AGE_VERIFICATION is a comma-separated list, shown to people in that order:
+//   none (default)  – self-declared date of birth only
+//   yoti            – needs YOTI_SDK_ID, YOTI_API_KEY, PUBLIC_URL
+//   connectid       – needs the ConnectID SDK (approved participants only) and CONNECTID_*
+//   mock            – a pretend bank AND a pretend selfie check for development and
+//                     tests (also mock-bank / mock-selfie). Refused in production.
 
 const crypto = require('crypto');
 const fs = require('fs');
@@ -71,8 +75,13 @@ function makePassSigner(getSecret) {
 }
 
 // ---------------------------------------------------------------- providers
-// Each provider exposes the same four calls as the ConnectID SDK uses, so the
-// routes don't care which one is active.
+// Every provider has the same shape, so the routes don't care which is used:
+//   name, kind ('bank' | 'selfie'), check()
+//   options()                      → [{ id, name, logo, fallback }]
+//   start(optionId, ctx)           → { authUrl, state?, data }   (ctx: state, callbackUrl, cancelUrl)
+//   finish(data, query)            → { over18: boolean, definitive: boolean }
+// "definitive" says whether a "no" means "under 18" (a bank knows your birthday) or
+// only "couldn't confirm" (a face that doesn't look 25+ may still be 19).
 
 function connectIdProvider(env) {
   // Certificates and keys can be given as a file path (CONNECTID_X_FILE) or as the
@@ -128,10 +137,11 @@ function connectIdProvider(env) {
 
   return {
     name: 'connectid',
+    kind: 'bank',
     async check() {
       await client();
     },
-    async banks() {
+    async options() {
       const c = await client();
       const [main, fallback] = await Promise.all([c.getParticipants(), c.getFallbackProviderParticipants().catch(() => [])]);
       const list = (orgs, isFallback) =>
@@ -146,67 +156,149 @@ function connectIdProvider(env) {
     async start(authServerId) {
       const c = await client();
       const r = await c.sendPushedAuthorisationRequest(authServerId, ['over18'], [], 'confirming you are 18 or older');
-      return { authUrl: r.authUrl, codeVerifier: r.codeVerifier, state: r.state, nonce: r.nonce };
+      // ConnectID makes its own state; the bank returns it to /verify/callback.
+      return { authUrl: r.authUrl, state: r.state, data: { authServerId, codeVerifier: r.codeVerifier, state: r.state, nonce: r.nonce } };
     },
-    async finish(pending, query) {
+    async finish(d, query) {
       const c = await client();
-      const tokens = await c.retrieveTokens(pending.authServerId, query, pending.codeVerifier, pending.state, pending.nonce);
+      const tokens = await c.retrieveTokens(d.authServerId, query, d.codeVerifier, d.state, d.nonce);
       const claims = tokens.consolidatedClaims();
-      return { over18: claims.over18 === true };
+      return { over18: claims.over18 === true, definitive: true };
     },
   };
 }
 
-// A pretend bank: same flow, no real identity check. For development and tests only.
-function mockProvider(env) {
-  if (env.NODE_ENV === 'production' && env.AGE_VERIFICATION_ALLOW_MOCK !== '1') {
-    throw new Error('AGE_VERIFICATION=mock is a fake bank and cannot be used in production.');
+// Yoti facial age estimation, using Yoti's hosted Age Verification service.
+// Docs: Yoti developer documentation → Age Verification (create a session, launch
+// the user view, get session result).
+function yotiProvider(env, fetchImpl = globalThis.fetch) {
+  const missing = ['YOTI_SDK_ID', 'YOTI_API_KEY', 'PUBLIC_URL'].filter((k) => !env[k]);
+  if (missing.length) throw new Error(`Yoti is missing settings: ${missing.join(', ')}`);
+  const threshold = Number(env.YOTI_THRESHOLD) || 25;
+  if (threshold < 18) throw new Error('YOTI_THRESHOLD must be 18 or more (25 is recommended).');
+  const apiBase = (env.YOTI_API_BASE || 'https://age.yoti.com/api/v1').replace(/\/$/, '');
+  const userView = env.YOTI_USER_VIEW_URL || 'https://age.yoti.com';
+  const headers = {
+    Authorization: `Bearer ${env.YOTI_API_KEY}`,
+    'Yoti-Sdk-Id': env.YOTI_SDK_ID,
+    'Content-Type': 'application/json',
+  };
+
+  async function call(method, path, body) {
+    const res = await fetchImpl(apiBase + path, {
+      method,
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
+      signal: AbortSignal.timeout(10_000),
+    });
+    const text = await res.text();
+    if (!res.ok) throw new Error(`Yoti ${method} ${path} → HTTP ${res.status}: ${text.slice(0, 200)}`);
+    return text ? JSON.parse(text) : {};
   }
-  const codes = new Map(); // code -> { state, over18 }
+
   return {
-    name: 'mock',
+    name: 'yoti',
+    kind: 'selfie',
+    threshold,
     async check() {},
-    async banks() {
-      return [
-        { id: 'mock-bank', name: 'Pretend Bank (testing only)', logo: '', fallback: false },
-        { id: 'mock-docs', name: 'Verify with ID documents (testing only)', logo: '', fallback: true },
-      ];
+    async options() {
+      return [{ id: 'fae', name: 'Selfie age check', logo: '', fallback: false }];
     },
-    async start(authServerId) {
-      const state = crypto.randomBytes(16).toString('base64url');
-      return {
-        authUrl: `/verify/mock-bank?as=${encodeURIComponent(authServerId)}&state=${state}`,
-        codeVerifier: crypto.randomBytes(16).toString('base64url'),
-        state,
-        nonce: crypto.randomBytes(16).toString('base64url'),
-      };
+    async start(optionId, { state, callbackUrl, cancelUrl }) {
+      const session = await call('POST', '/sessions', {
+        type: 'OVER',
+        ttl: 900,
+        reference_id: state,
+        age_estimation: { allowed: true, threshold, level: 'PASSIVE', retry_limit: 1 },
+        callback: { auto: true, url: callbackUrl },
+        cancel_url: cancelUrl,
+      });
+      const id = session.id || session.session_id;
+      if (!id) throw new Error('Yoti did not return a session id');
+      const url = new URL(userView);
+      url.searchParams.set('sessionId', id);
+      url.searchParams.set('sdkId', env.YOTI_SDK_ID);
+      return { authUrl: url.toString(), data: { sessionId: id, state } };
     },
-    approve(state, over18) {
+    async finish(d) {
+      // The person is back from Yoti; the decision is normally ready. Allow a few
+      // seconds in case it's still being processed.
+      let r;
+      for (let i = 0; i < 6; i++) {
+        r = await call('GET', `/sessions/${encodeURIComponent(d.sessionId)}/result`);
+        if (r.status !== 'IN_PROGRESS' && r.status !== 'PENDING') break;
+        await new Promise((ok) => setTimeout(ok, 1500));
+      }
+      if (r.reference_id && r.reference_id !== d.state) throw new Error('Yoti result does not belong to this check');
+      if (r.status === 'COMPLETE') return { over18: true, definitive: false };
+      if (r.status === 'FAIL') return { over18: false, definitive: false };
+      if (r.status === 'CANCELLED') return { cancelled: true };
+      throw new Error(`Yoti session ended with status ${r.status}`);
+    },
+  };
+}
+
+// Pretend providers: same flow, no real check. For development and tests only.
+function mockProvider(env, kind) {
+  if (env.NODE_ENV === 'production' && env.AGE_VERIFICATION_ALLOW_MOCK !== '1') {
+    throw new Error('AGE_VERIFICATION=mock is a pretend age check and cannot be used in production.');
+  }
+  const codes = new Map(); // code -> { state, pass }
+  const bank = kind === 'bank';
+  return {
+    name: bank ? 'mock-bank' : 'mock-selfie',
+    kind,
+    mock: true,
+    threshold: 25,
+    async check() {},
+    async options() {
+      return bank
+        ? [
+            { id: 'mock-bank', name: 'Pretend Bank (testing only)', logo: '', fallback: false },
+            { id: 'mock-docs', name: 'Verify with ID documents (testing only)', logo: '', fallback: true },
+          ]
+        : [{ id: 'fae', name: 'Pretend selfie check (testing only)', logo: '', fallback: false }];
+    },
+    async start(optionId, { state }) {
+      return { authUrl: `/verify/mock?kind=${kind}&state=${state}`, data: { state } };
+    },
+    approve(state, pass) {
       const code = crypto.randomBytes(12).toString('base64url');
-      codes.set(code, { state, over18 });
+      codes.set(code, { state, pass });
       return code;
     },
-    async finish(pending, query) {
+    async finish(d, query) {
       const c = codes.get(query.code);
       codes.delete(query.code);
-      if (!c || c.state !== pending.state) throw new Error('invalid authorisation code');
-      return { over18: c.over18 };
+      if (!c || c.state !== d.state) throw new Error('invalid code');
+      return { over18: c.pass, definitive: bank };
     },
   };
 }
 
-function createProvider(env = process.env) {
-  const kind = (env.AGE_VERIFICATION || 'none').toLowerCase();
-  if (kind === 'none') return null;
-  if (kind === 'connectid') return connectIdProvider(env);
-  if (kind === 'mock') return mockProvider(env);
-  throw new Error(`Unknown AGE_VERIFICATION "${kind}" (use none, connectid or mock).`);
+function createProviders(env = process.env, { fetchImpl } = {}) {
+  // Render sets RENDER_EXTERNAL_URL automatically, so PUBLIC_URL is optional there.
+  env = { ...env, PUBLIC_URL: env.PUBLIC_URL || env.RENDER_EXTERNAL_URL || '' };
+  const names = String(env.AGE_VERIFICATION || 'none')
+    .toLowerCase()
+    .split(',')
+    .map((x) => x.trim())
+    .filter((x) => x && x !== 'none')
+    .flatMap((x) => (x === 'mock' ? ['mock-selfie', 'mock-bank'] : [x]));
+  return [...new Set(names)].map((n) => {
+    if (n === 'connectid') return connectIdProvider(env);
+    if (n === 'yoti') return yotiProvider(env, fetchImpl);
+    if (n === 'mock-bank') return mockProvider(env, 'bank');
+    if (n === 'mock-selfie') return mockProvider(env, 'selfie');
+    throw new Error(`Unknown AGE_VERIFICATION "${n}" (use none, yoti, connectid or mock).`);
+  });
 }
 
 // ---------------------------------------------------------------- routes
-function mountAgeVerification(app, { provider, getSecret, secureCookies, onEvent = () => {} }) {
+function mountAgeVerification(app, { providers, getSecret, secureCookies, publicUrl = '', onEvent = () => {} }) {
   const passes = makePassSigner(getSecret);
-  const pending = new Map(); // state -> { authServerId, codeVerifier, state, nonce, at }
+  const byName = new Map(providers.map((p) => [p.name, p]));
+  const pending = new Map(); // state -> { provider, data, at }
   const startLimiter = new Map(); // ip -> [timestamps]
 
   const prune = () => {
@@ -215,27 +307,31 @@ function mountAgeVerification(app, { provider, getSecret, secureCookies, onEvent
   };
   setInterval(prune, 60_000).unref();
 
-  const isVerified = (cookieHeader) => !provider || passes.check(parseCookies(cookieHeader)[PASS_COOKIE]);
+  const isVerified = (cookieHeader) => !providers.length || passes.check(parseCookies(cookieHeader)[PASS_COOKIE]);
 
   app.get('/verify/status', (req, res) => {
     res.set('Cache-Control', 'no-store');
-    res.json({ required: Boolean(provider), provider: provider?.name || 'none', verified: isVerified(req.headers.cookie) });
+    res.json({ required: providers.length > 0, methods: providers.map((p) => p.name), verified: isVerified(req.headers.cookie) });
   });
 
-  if (!provider) return { isVerified };
+  if (!providers.length) return { isVerified };
 
-  app.get('/verify/banks', async (req, res) => {
-    try {
-      res.set('Cache-Control', 'no-store');
-      res.json({ banks: await provider.banks() });
-    } catch (err) {
-      console.error('[age] could not list banks:', err.message);
-      res.status(503).json({ error: 'Age verification is temporarily unavailable. Please try again shortly.' });
-    }
+  // The choices to show, grouped by method, in the configured order.
+  app.get('/verify/options', async (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    const methods = await Promise.all(providers.map(async (p) => {
+      try {
+        return { method: p.name, kind: p.kind, threshold: p.kind === 'selfie' ? p.threshold : undefined, options: await p.options() };
+      } catch (err) {
+        console.error(`[age] ${p.name} options unavailable:`, err.message);
+        return { method: p.name, kind: p.kind, options: [], unavailable: true };
+      }
+    }));
+    res.json({ methods });
   });
 
   app.post('/verify/start', require('express').json({ limit: '1kb' }), async (req, res) => {
-    // JSON-only, so a form on another site can't start a flow on someone's behalf.
+    // JSON-only, so a form on another site can't start a check on someone's behalf.
     if (!req.is('application/json')) return res.status(415).json({ error: 'Unsupported request.' });
     const ip = req.ip || '';
     const recent = (startLimiter.get(ip) || []).filter((t) => Date.now() - t < 10 * 60_000);
@@ -243,19 +339,27 @@ function mountAgeVerification(app, { provider, getSecret, secureCookies, onEvent
     recent.push(Date.now());
     startLimiter.set(ip, recent);
 
-    const authServerId = String(req.body?.bankId || '');
+    const provider = byName.get(String(req.body?.method || ''));
+    const optionId = String(req.body?.optionId || '');
+    if (!provider) return res.status(400).json({ error: 'Choose one of the options shown.' });
     try {
-      const banks = await provider.banks();
-      if (!banks.some((b) => b.id === authServerId)) return res.status(400).json({ error: 'Choose a bank from the list.' });
+      if (!(await provider.options()).some((o) => o.id === optionId)) return res.status(400).json({ error: 'Choose one of the options shown.' });
       prune();
-      const r = await provider.start(authServerId);
-      pending.set(r.state, { authServerId, codeVerifier: r.codeVerifier, state: r.state, nonce: r.nonce, at: Date.now() });
-      // Ties the bank's reply to this browser: a callback with someone else's state is rejected.
-      res.set('Set-Cookie', cookieString(STATE_COOKIE, r.state, { maxAgeSec: PENDING_MS / 1000, secure: secureCookies }));
+      const ourState = crypto.randomBytes(18).toString('base64url');
+      const base = publicUrl.replace(/\/$/, '');
+      const r = await provider.start(optionId, {
+        state: ourState,
+        callbackUrl: `${base}/verify/callback?state=${ourState}`,
+        cancelUrl: `${base}/verify/callback?state=${ourState}&error=access_denied`,
+      });
+      const state = r.state || ourState;
+      pending.set(state, { provider: provider.name, data: r.data, at: Date.now() });
+      // Ties the reply to this browser: a callback carrying someone else's state is rejected.
+      res.set('Set-Cookie', cookieString(STATE_COOKIE, state, { maxAgeSec: PENDING_MS / 1000, secure: secureCookies }));
       res.json({ authUrl: r.authUrl });
     } catch (err) {
-      console.error('[age] could not start verification:', err.message);
-      res.status(503).json({ error: 'Your bank could not be reached. Please try again or choose another option.' });
+      console.error(`[age] could not start ${provider.name}:`, err.message);
+      res.status(503).json({ error: 'That check is unavailable right now. Please try again or choose another option.' });
     }
   });
 
@@ -263,9 +367,10 @@ function mountAgeVerification(app, { provider, getSecret, secureCookies, onEvent
 
   app.get('/verify/callback', async (req, res) => {
     const clearState = cookieString(STATE_COOKIE, '', { maxAgeSec: 0, secure: secureCookies });
+    const one = (v) => (Array.isArray(v) ? v[0] : v);
     const query = {
-      code: req.query.code, state: req.query.state, iss: req.query.iss,
-      error: req.query.error, error_description: req.query.error_description,
+      code: one(req.query.code), state: one(req.query.state), iss: one(req.query.iss),
+      error: one(req.query.error), error_description: one(req.query.error_description),
     };
     const state = String(query.state || '');
     const p = pending.get(state);
@@ -275,35 +380,49 @@ function mountAgeVerification(app, { provider, getSecret, secureCookies, onEvent
     if (!p || parseCookies(req.headers.cookie)[STATE_COOKIE] !== state) return finishPage(res, 'expired');
     if (query.error) return finishPage(res, query.error === 'access_denied' ? 'cancelled' : 'failed');
 
+    const provider = byName.get(p.provider);
     try {
-      const { over18 } = await provider.finish(p, query);
-      if (!over18) {
-        onEvent('auto', 'Bank age check: person is not 18+. Entry refused.');
-        return finishPage(res, 'under18');
+      const r = await provider.finish(p.data, query);
+      if (r.cancelled) return finishPage(res, 'cancelled');
+      if (!r.over18) {
+        if (r.definitive) {
+          onEvent('auto', `Age check (${provider.kind === 'bank' ? 'bank' : 'selfie'}): person is not 18+. Entry refused.`);
+          return finishPage(res, 'under18');
+        }
+        // A face that doesn't look 25+ isn't proof of being under 18: offer another way.
+        return finishPage(res, 'notconfirmed');
       }
       res.set('Set-Cookie', [clearState, cookieString(PASS_COOKIE, passes.issue(), { maxAgeSec: PASS_HOURS * 3600, secure: secureCookies })]);
       return finishPage(res, 'verified');
     } catch (err) {
-      console.error('[age] verification failed:', err.message);
+      console.error(`[age] ${provider.name} check failed:`, err.message);
       return finishPage(res, 'failed');
     }
   });
 
-  if (provider.name === 'mock') {
+  const mocks = providers.filter((p) => p.mock);
+  if (mocks.length) {
     const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
-    app.get('/verify/mock-bank', (req, res) => {
+    app.get('/verify/mock', (req, res) => {
+      const bank = req.query.kind === 'bank';
+      const provider = mocks.find((m) => m.kind === (bank ? 'bank' : 'selfie'));
+      if (!provider) return res.status(404).end();
       const state = String(req.query.state || '');
       const yes = provider.approve(state, true);
       const no = provider.approve(state, false);
       const cb = (q) => `/verify/callback?${new URLSearchParams({ state, ...q })}`;
+      const title = bank ? 'Pretend Bank' : 'Pretend selfie check';
+      const ask = bank
+        ? '<strong>Afterhours</strong> is asking to confirm you are <strong>18 or older</strong>.<br>It will not receive your name, date of birth or anything else.'
+        : '<strong>Afterhours</strong> needs to check you look <strong>25 or older</strong>.<br>A real check would take a selfie here and delete it straight away.';
       res.type('html').send(`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Pretend Bank</title><link rel="stylesheet" href="/styles.css">
-<main class="card narrow"><h1>Pretend Bank</h1>
-<p class="warn"><strong>Testing only.</strong> This stands in for a real bank's ConnectID screen.</p>
-<p><strong>Afterhours</strong> is asking to confirm you are <strong>18 or older</strong>.<br>It will not receive your name, date of birth or anything else.</p>
+<title>${title}</title><link rel="stylesheet" href="/styles.css">
+<main class="card narrow"><h1>${title}</h1>
+<p class="warn"><strong>Testing only.</strong> This stands in for ${bank ? "a real bank's ConnectID screen" : "Yoti's selfie age check"}.</p>
+<p>${ask}</p>
 <div class="row">
-<a class="button primary" id="mock-yes" href="${esc(cb({ code: yes }))}">Share: I'm 18 or older</a>
-<a class="button" id="mock-no" href="${esc(cb({ code: no }))}">Share: I'm under 18</a>
+<a class="button primary" id="mock-yes" href="${esc(cb({ code: yes }))}">${bank ? "Share: I'm 18 or older" : 'Pass: looks 25+'}</a>
+<a class="button" id="mock-no" href="${esc(cb({ code: no }))}">${bank ? "Share: I'm under 18" : "Fail: doesn't look 25+"}</a>
 <a class="button ghost" id="mock-cancel" href="${esc(cb({ error: 'access_denied' }))}">Cancel</a>
 </div></main>`);
     });
@@ -312,4 +431,4 @@ function mountAgeVerification(app, { provider, getSecret, secureCookies, onEvent
   return { isVerified };
 }
 
-module.exports = { createProvider, mountAgeVerification, makePassSigner, parseCookies, PASS_COOKIE };
+module.exports = { createProviders, mountAgeVerification, makePassSigner, parseCookies, PASS_COOKIE };

@@ -7,7 +7,7 @@ const express = require('express');
 const { Server } = require('socket.io');
 const core = require('./lib/core');
 const { createStore } = require('./lib/store');
-const { createProvider, mountAgeVerification } = require('./lib/age-verification');
+const { createProviders, mountAgeVerification } = require('./lib/age-verification');
 
 const fs = require('fs');
 
@@ -19,7 +19,7 @@ const MOD_ENABLED = MOD_PASSWORD.length >= 12;
 const TRUST_PROXY = process.env.TRUST_PROXY === '1';
 
 // Fails fast on a bad AGE_VERIFICATION setup rather than running without the check.
-const ageProvider = createProvider();
+const ageProviders = createProviders();
 
 const app = express();
 app.disable('x-powered-by');
@@ -48,17 +48,23 @@ const LEGAL_VARS = {
   HOSTING_REGION: process.env.HOSTING_REGION,
   RETENTION_DAYS: String(require('./lib/store').RETENTION_DAYS),
   AGE_PASS_HOURS: String(Number(process.env.AGE_PASS_HOURS) || 12),
+  YOTI_THRESHOLD: String(Number(process.env.YOTI_THRESHOLD) || 25),
 };
 // Sections wrapped in <!--if:NAME-->…<!--endif--> appear only when that feature is on,
 // so the pages always describe how this deployment actually works.
 const LEGAL_FLAGS = {
-  BANK_AGE_CHECK: ['connectid', 'mock'].includes(String(process.env.AGE_VERIFICATION || '').toLowerCase()),
+  BANK_AGE_CHECK: ageProviders.some((p) => p.kind === 'bank'),
+  FACE_AGE_CHECK: ageProviders.some((p) => p.kind === 'selfie'),
+  ANY_AGE_CHECK: ageProviders.length > 0,
 };
 const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 function renderLegal(name) {
-  const tpl = fs
-    .readFileSync(path.join(__dirname, 'views', name + '.html'), 'utf8')
-    .replace(/<!--if:(\w+)-->([\s\S]*?)<!--endif-->/g, (_, flag, body) => (LEGAL_FLAGS[flag] ? body : ''));
+  let tpl = fs.readFileSync(path.join(__dirname, 'views', name + '.html'), 'utf8');
+  // Resolve innermost blocks first so sections can be nested.
+  const innermost = /<!--if:(\w+)-->((?:(?!<!--if:)[\s\S])*?)<!--endif-->/g;
+  while (innermost.test(tpl)) {
+    tpl = tpl.replace(innermost, (_, flag, body) => (LEGAL_FLAGS[flag] ? body : ''));
+  }
   return tpl.replace(/\{\{(\w+)\}\}/g, (_, key) => {
     const v = LEGAL_VARS[key];
     if (!v) return `<mark class="unset">[set ${key}]</mark>`;
@@ -69,7 +75,8 @@ function renderLegal(name) {
 // Age verification routes (/verify/*). Uses the IP-hash secret to sign passes; it's
 // loaded from the database at startup, before the server accepts any requests.
 const ageCheck = mountAgeVerification(app, {
-  provider: ageProvider,
+  providers: ageProviders,
+  publicUrl: process.env.PUBLIC_URL || process.env.RENDER_EXTERNAL_URL || '',
   getSecret: () => ipSecret,
   secureCookies: TRUST_PROXY || process.env.NODE_ENV === 'production',
   onEvent: (type, text) => log(type, text),
@@ -241,7 +248,7 @@ function modSnapshot() {
   return {
     at: Date.now(),
     persistent: store.kind === 'postgres',
-    ageCheck: ageProvider?.name || 'none',
+    ageCheck: ageProviders.map((p) => p.name),
     stats: {
       online: users.size,
       chats: chats.size,
@@ -559,7 +566,7 @@ async function shutdown() {
 if (require.main === module) {
   ready
     .then(async (saved) => {
-      if (ageProvider) await ageProvider.check();
+      for (const p of ageProviders) await p.check();
       return saved;
     })
     .then((saved) => {
@@ -571,9 +578,9 @@ if (require.main === module) {
             : 'Database: none (DATABASE_URL not set) — bans and reports reset on restart'
         );
         console.log(
-          ageProvider
-            ? `Age verification: ${ageProvider.name}${ageProvider.name === 'mock' ? ' (PRETEND BANK — testing only)' : ''}`
-            : 'Age verification: self-declared date of birth only (set AGE_VERIFICATION=connectid for bank checks)'
+          ageProviders.length
+            ? `Age verification: ${ageProviders.map((p) => p.name).join(', ')}${ageProviders.some((p) => p.mock) ? ' (PRETEND CHECKS — testing only)' : ''}`
+            : 'Age verification: self-declared date of birth only (set AGE_VERIFICATION=yoti,connectid)'
         );
         console.log(
           MOD_ENABLED
