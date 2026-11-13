@@ -95,3 +95,5 @@ label.check { display: flex; }
 
 dialog { background: var(--panel); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius); max-width: 460px; width: calc(100% - 32px); }
 dialog::backdrop { background: rgba(0,0,0,.6); }
+
+.notice { display: flex; gap: 1rem; align-items: center; justify-content: space-between; padding: .6rem 1rem; background: #4a3410; border-bottom: 1px solid #c98a1b; }

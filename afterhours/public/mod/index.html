@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Afterhours Moderation</title>
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="mod.css">
+</head>
+<body>
+  <section id="login" class="card narrow">
+    <h1>Moderation</h1>
+    <p class="muted">Staff only. Every action you take is logged with your name.</p>
+    <form id="login-form" autocomplete="off">
+      <label>Your name <input name="name" maxlength="24" required placeholder="Shown in the activity log"></label>
+      <label>Moderator password <input name="password" type="password" required autocomplete="current-password"></label>
+      <p id="login-error" class="error" role="alert"></p>
+      <button class="primary" type="submit">Sign in</button>
+    </form>
+  </section>
+
+  <section id="dash" hidden>
+    <header class="topbar">
+      <strong>Afterhours · Moderation</strong>
+      <span id="conn" class="pill">connecting…</span>
+      <span id="whoami" class="muted"></span>
+      <button id="logout" class="ghost small push-right">Sign out</button>
+    </header>
+
+    <div class="stats">
+      <div class="stat"><span id="s-open">0</span><small>open reports</small></div>
+      <div class="stat"><span id="s-online">0</span><small>online</small></div>
+      <div class="stat"><span id="s-chats">0</span><small>active chats</small></div>
+      <div class="stat"><span id="s-bans">0</span><small>active bans</small></div>
+    </div>
+
+    <nav class="mod-tabs" role="tablist">
+      <button data-tab="reports" class="active">Reports <span class="badge" id="b-reports"></span></button>
+      <button data-tab="users">Online</button>
+      <button data-tab="bans">Bans</button>
+      <button data-tab="activity">Activity</button>
+    </nav>
+
+    <main class="mod-main">
+      <section data-panel="reports">
+        <div class="filter row">
+          <label class="check"><input type="radio" name="rfilter" value="open" checked> Open</label>
+          <label class="check"><input type="radio" name="rfilter" value="all"> All</label>
+        </div>
+        <ul id="reports" class="cards"></ul>
+      </section>
+
+      <section data-panel="users" hidden>
+        <input id="user-search" type="search" placeholder="Search nickname, city, bio…">
+        <ul id="users" class="cards"></ul>
+      </section>
+
+      <section data-panel="bans" hidden>
+        <p class="muted small">Bans apply to the person's network address (shown as a fingerprint, never the real address). They are cleared if the server restarts.</p>
+        <ul id="bans" class="cards"></ul>
+      </section>
+
+      <section data-panel="activity" hidden>
+        <ul id="activity" class="feed"></ul>
+      </section>
+    </main>
+  </section>
+
+  <dialog id="ban-dlg">
+    <h3>Ban <span id="ban-name"></span></h3>
+    <form method="dialog" id="ban-form">
+      <label>Length
+        <select name="length">
+          <option value="24h">24 hours</option>
+          <option value="7d">7 days</option>
+          <option value="30d">30 days</option>
+          <option value="permanent">Until server restart (permanent)</option>
+        </select>
+      </label>
+      <label>Reason <input name="reason" maxlength="120" placeholder="e.g. Harassment after being told no"></label>
+      <div class="row">
+        <button value="cancel" class="ghost">Cancel</button>
+        <button value="ban" class="danger">Ban</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="warn-dlg">
+    <h3>Warn <span id="warn-name"></span></h3>
+    <form method="dialog" id="warn-form">
+      <label>Message they'll see <textarea name="text" maxlength="300" rows="3">Please keep it respectful and stop if someone says no.</textarea></label>
+      <div class="row">
+        <button value="cancel" class="ghost">Cancel</button>
+        <button value="warn" class="primary">Send warning</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="mod.js"></script>
+</body>
+</html>

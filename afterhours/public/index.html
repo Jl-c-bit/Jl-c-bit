@@ -59,6 +59,7 @@
           <li><strong>Consent first.</strong> Ask before getting explicit. "No", silence, or leaving the chat means stop.</li>
           <li><strong>No selling.</strong> No payments, escorting, paid content, or links to them.</li>
           <li><strong>No harassment, threats, or hate.</strong></li>
+          <li><strong>Privacy.</strong> Chats aren't saved. If someone reports a chat, its last 20 messages go to moderators for review.</li>
           <li><strong>Protect yourself.</strong> Don't share your full name, address, workplace, or photos with faces until you trust someone.</li>
         </ul>
       </details>
@@ -71,6 +72,7 @@
 
   <!-- Main app -->
   <section id="main" class="screen" hidden>
+    <div id="notice" class="notice" role="alert" hidden><span></span><button class="ghost small" id="notice-close">OK</button></div>
     <header class="topbar">
       <strong>Afterhours</strong>
       <span id="me-label" class="muted"></span>
@@ -112,7 +114,7 @@
       <label class="check"><input type="radio" name="reason" value="harassment" checked> Harassment or no consent</label>
       <label class="check"><input type="radio" name="reason" value="selling"> Selling / scam</label>
       <label class="check"><input type="radio" name="reason" value="other"> Something else</label>
-      <p class="small muted">Reporting also blocks them for you.</p>
+      <p class="small muted">Reporting also blocks them for you. Your last 20 messages with them are shared with moderators so they can review it.</p>
       <div class="row">
         <button value="cancel" class="ghost">Cancel</button>
         <button value="send" class="danger">Report</button>

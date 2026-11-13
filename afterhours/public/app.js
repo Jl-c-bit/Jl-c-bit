@@ -219,6 +219,12 @@
     reportTarget = null;
   });
 
+  socket.on('notice', (msg) => {
+    $('#notice span').textContent = 'Message from a moderator: ' + msg;
+    $('#notice').hidden = false;
+  });
+  $('#notice-close').onclick = () => { $('#notice').hidden = true; };
+
   socket.on('fatal', (msg) => {
     document.body.innerHTML = '';
     const d = document.createElement('div');
