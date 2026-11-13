@@ -58,4 +58,4 @@ dialog select { width: 100%; }
   #whoami { display: none; }
   .topbar { gap: .5rem; }
 }
-@media (max-width: 600px) { #db { display: none; } }
+@media (max-width: 600px) { #db, #age-pill { display: none; } }

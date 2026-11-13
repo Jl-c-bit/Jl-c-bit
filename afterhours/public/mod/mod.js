@@ -152,6 +152,9 @@
     db.hidden = false;
     db.className = 'pill ' + (state.persistent ? 'live' : 'down');
     db.textContent = state.persistent ? 'saved to database' : 'no database';
+    $('#age-pill').hidden = false;
+    $('#age-pill').className = 'pill ' + (state.ageCheck === 'connectid' ? 'live' : 'down');
+    $('#age-pill').textContent = { connectid: 'age check: ConnectID', mock: 'age check: PRETEND BANK', none: 'age check: self-declared' }[state.ageCheck] || state.ageCheck;
     db.title = state.persistent ? '' : 'Bans and reports will be lost when the server restarts. Set DATABASE_URL.';
     $('#persist-note').textContent = state.persistent
       ? ' Bans are saved and survive restarts.'

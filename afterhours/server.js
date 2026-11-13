@@ -7,6 +7,7 @@ const express = require('express');
 const { Server } = require('socket.io');
 const core = require('./lib/core');
 const { createStore } = require('./lib/store');
+const { createProvider, mountAgeVerification } = require('./lib/age-verification');
 
 const fs = require('fs');
 
@@ -17,15 +18,19 @@ const MOD_ENABLED = MOD_PASSWORD.length >= 12;
 // Set TRUST_PROXY=1 when running behind a host's load balancer (Render, Railway, Fly).
 const TRUST_PROXY = process.env.TRUST_PROXY === '1';
 
+// Fails fast on a bad AGE_VERIFICATION setup rather than running without the check.
+const ageProvider = createProvider();
+
 const app = express();
 app.disable('x-powered-by');
+if (TRUST_PROXY) app.set('trust proxy', 1);
 app.use((req, res, next) => {
   res.set({
     'X-Content-Type-Options': 'nosniff',
     'Referrer-Policy': 'no-referrer',
     'X-Frame-Options': 'DENY',
     'Content-Security-Policy':
-      "default-src 'self'; connect-src 'self' ws: wss:; img-src 'self' data:; style-src 'self'; script-src 'self'",
+      "default-src 'self'; connect-src 'self' ws: wss:; img-src 'self' data: https:; style-src 'self'; script-src 'self'",
   });
   next();
 });
@@ -42,10 +47,18 @@ const LEGAL_VARS = {
   LEGAL_EFFECTIVE_DATE: process.env.LEGAL_EFFECTIVE_DATE,
   HOSTING_REGION: process.env.HOSTING_REGION,
   RETENTION_DAYS: String(require('./lib/store').RETENTION_DAYS),
+  AGE_PASS_HOURS: String(Number(process.env.AGE_PASS_HOURS) || 12),
+};
+// Sections wrapped in <!--if:NAME-->…<!--endif--> appear only when that feature is on,
+// so the pages always describe how this deployment actually works.
+const LEGAL_FLAGS = {
+  BANK_AGE_CHECK: ['connectid', 'mock'].includes(String(process.env.AGE_VERIFICATION || '').toLowerCase()),
 };
 const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 function renderLegal(name) {
-  const tpl = fs.readFileSync(path.join(__dirname, 'views', name + '.html'), 'utf8');
+  const tpl = fs
+    .readFileSync(path.join(__dirname, 'views', name + '.html'), 'utf8')
+    .replace(/<!--if:(\w+)-->([\s\S]*?)<!--endif-->/g, (_, flag, body) => (LEGAL_FLAGS[flag] ? body : ''));
   return tpl.replace(/\{\{(\w+)\}\}/g, (_, key) => {
     const v = LEGAL_VARS[key];
     if (!v) return `<mark class="unset">[set ${key}]</mark>`;
@@ -53,6 +66,15 @@ function renderLegal(name) {
     return escapeHtml(v);
   });
 }
+// Age verification routes (/verify/*). Uses the IP-hash secret to sign passes; it's
+// loaded from the database at startup, before the server accepts any requests.
+const ageCheck = mountAgeVerification(app, {
+  provider: ageProvider,
+  getSecret: () => ipSecret,
+  secureCookies: TRUST_PROXY || process.env.NODE_ENV === 'production',
+  onEvent: (type, text) => log(type, text),
+});
+
 const legalPages = { terms: renderLegal('terms'), privacy: renderLegal('privacy') };
 for (const name of Object.keys(legalPages)) {
   app.get([`/${name}`, `/${name}.html`], (req, res) => res.type('html').send(legalPages[name]));
@@ -219,6 +241,7 @@ function modSnapshot() {
   return {
     at: Date.now(),
     persistent: store.kind === 'postgres',
+    ageCheck: ageProvider?.name || 'none',
     stats: {
       online: users.size,
       chats: chats.size,
@@ -261,6 +284,9 @@ io.on('connection', (socket) => {
 
   socket.on('join', (input, ack = () => {}) => {
     if (me) return ack({ ok: false, error: 'Already joined.' });
+    if (!ageCheck.isVerified(socket.handshake.headers.cookie)) {
+      return ack({ ok: false, needsVerification: true, error: 'Please confirm you are 18+ with your bank first.' });
+    }
     const result = core.validateProfile(input);
     if (!result.ok) {
       ack({ ok: false, error: result.error });
@@ -532,6 +558,10 @@ async function shutdown() {
 
 if (require.main === module) {
   ready
+    .then(async (saved) => {
+      if (ageProvider) await ageProvider.check();
+      return saved;
+    })
     .then((saved) => {
       server.listen(PORT, () => {
         console.log(`Afterhours listening on http://localhost:${PORT}`);
@@ -541,6 +571,11 @@ if (require.main === module) {
             : 'Database: none (DATABASE_URL not set) — bans and reports reset on restart'
         );
         console.log(
+          ageProvider
+            ? `Age verification: ${ageProvider.name}${ageProvider.name === 'mock' ? ' (PRETEND BANK — testing only)' : ''}`
+            : 'Age verification: self-declared date of birth only (set AGE_VERIFICATION=connectid for bank checks)'
+        );
+        console.log(
           MOD_ENABLED
             ? `Moderator dashboard: http://localhost:${PORT}/mod/`
             : 'Moderator dashboard disabled: set MOD_PASSWORD (12+ characters) to enable it.'
@@ -548,7 +583,7 @@ if (require.main === module) {
       });
     })
     .catch((err) => {
-      console.error('Could not start: database unavailable —', err.message);
+      console.error('Could not start:', err.message);
       process.exit(1);
     });
 

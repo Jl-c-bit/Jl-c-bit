@@ -31,6 +31,7 @@ test('terms and privacy pages are served with settings filled in', async (t) => 
   assert.ok(terms.includes('Australian Consumer Law') && terms.includes('ACCCE') && terms.includes('esafety.gov.au/report'), 'Australian terms');
   assert.ok(privacy.includes('Australian Privacy Principles') && privacy.includes('oaic.gov.au'), 'Australian privacy');
   assert.ok(!/NCMEC|USD/.test(terms + privacy), 'no US-specific leftovers');
+  assert.ok(!privacy.includes('ConnectID') && !privacy.includes('<!--if:'), 'bank-check sections hidden when off');
 
   const home = await (await fetch(base + '/')).text();
   assert.ok(home.includes('href="/terms"') && home.includes('href="/privacy"'), 'home links to both');

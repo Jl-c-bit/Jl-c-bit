@@ -21,6 +21,24 @@
     <p class="small muted legal-links">By entering you agree to our <a href="/terms">Terms of Service</a> and <a href="/privacy">Privacy Policy</a>.</p>
   </section>
 
+  <!-- Bank age check (only shown when AGE_VERIFICATION is on) -->
+  <section id="verify" class="screen card narrow" hidden>
+    <h2>Confirm you're 18+ with your bank</h2>
+    <p>We use <strong>ConnectID</strong> to ask your bank one question: <em>is this person 18 or older?</em></p>
+    <ul class="small">
+      <li>Your bank only answers <strong>yes or no</strong>. We never see your name, date of birth, or any other details.</li>
+      <li>You'll log in to your own bank and approve it there. It takes about a minute.</li>
+      <li>Your bank will see that <strong>Afterhours</strong> asked, as it does with any ConnectID check.</li>
+    </ul>
+    <p id="verify-msg" class="error" role="alert"></p>
+    <h3 class="small muted">Choose your bank</h3>
+    <ul id="banks" class="banks"><li class="muted small">Loading…</li></ul>
+    <div id="fallback-wrap" hidden>
+      <p class="small muted">Bank not listed?</p>
+      <ul id="fallback" class="banks"></ul>
+    </div>
+  </section>
+
   <!-- Profile / join -->
   <section id="join" class="screen card narrow" hidden>
     <h2>Create a temporary profile</h2>

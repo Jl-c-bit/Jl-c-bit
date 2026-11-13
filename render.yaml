@@ -10,7 +10,11 @@ services:
     rootDir: afterhours
     plan: free
     region: singapore   # closest Render region to Australia
-    buildCommand: npm ci --omit=dev --no-audit --no-fund
+    # The ConnectID SDK is only installed once you switch AGE_VERIFICATION to connectid
+    # (its licence is for approved ConnectID participants).
+    buildCommand: >-
+      npm ci --omit=dev --no-audit --no-fund &&
+      if [ "$AGE_VERIFICATION" = "connectid" ]; then npm install --no-save --no-audit --no-fund @connectid-tools/rp-nodejs-sdk@6.1.0; fi
     startCommand: npm start
     healthCheckPath: /healthz
     envVars:
@@ -30,6 +34,10 @@ services:
         sync: false
       - key: HOSTING_REGION
         value: Singapore
+      # Change to "connectid" after ConnectID onboarding, and add the CONNECTID_* settings
+      # listed in afterhours/README.md as secret environment variables.
+      - key: AGE_VERIFICATION
+        value: none
       - key: TRUST_PROXY
         value: "1"
       - key: IP_HASH_SECRET

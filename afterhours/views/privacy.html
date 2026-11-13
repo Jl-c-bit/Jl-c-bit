@@ -59,6 +59,13 @@
         <td>Needed to connect you, and to enforce bans.</td>
         <td>Never stored. We keep a one-way keyed hash (a scrambled code) for active bans and reports, which can't be turned back into your address.</td>
       </tr>
+      <!--if:BANK_AGE_CHECK-->
+      <tr>
+        <td><strong>Age check result</strong> (via ConnectID and your bank)</td>
+        <td>To confirm you are 18+ before you can go online. We ask your bank only whether you are over 18. We don't request or receive your name, date of birth, address, or any account details.</td>
+        <td>Not stored on our servers. Your browser keeps a signed "18+ confirmed" cookie for {{AGE_PASS_HOURS}} hours so you don't have to repeat the check.</td>
+      </tr>
+      <!--endif-->
       <tr>
         <td><strong>Bans</strong>: hashed address, nickname, reason, who issued it, expiry</td>
         <td>To keep banned people out.</td>
@@ -81,7 +88,10 @@
     <li><strong>Other users</strong> whose preferences match yours can see your nickname, age, gender, what you're looking for, your general area, and your bio. They never see your date of birth, who you're interested in, or your network address.</li>
     <li><strong>The person you chat with</strong> sees your messages. Remember they could screenshot them. That breaks our rules, but we can't technically prevent it.</li>
     <li><strong>Moderators</strong> can see everyone online and their profiles, plus reports and their chat excerpts. They never see your IP address, only the first 8 characters of its hash. Moderators can't read chats that haven't been reported.</li>
-    <li><strong>Service providers</strong> who run the site for us: our hosting and database provider, located in {{HOSTING_REGION}}. If we add an age-verification provider, it will process the data needed to check your age under its own privacy policy, and we'll list it here.</li>
+    <li><strong>Service providers</strong> who run the site for us: our hosting and database provider, located in {{HOSTING_REGION}}.</li>
+    <!--if:BANK_AGE_CHECK-->
+    <li><strong>ConnectID and your bank.</strong> We use ConnectID (operated by eftpos Digital Identity Pty Ltd, part of Australian Payments Plus) to check your age. You choose your bank (or ConnectID's document-check option), sign in there, and approve sharing whether you are over 18. <strong>Your bank and ConnectID will know that Afterhours asked to verify your age</strong>, and they handle that under their own privacy policies. We never see your banking login.</li>
+    <!--endif-->
     <li><strong>Authorities.</strong> We report suspected child sexual abuse or exploitation to the Australian Federal Police through the Australian Centre to Counter Child Exploitation (ACCCE), or to the equivalent authority overseas. We may share relevant information with police or the eSafety Commissioner when the law requires it, or when we believe in good faith that it's needed to prevent a serious threat to someone's life, health, or safety.</li>
   </ul>
   <p>We never sell your data, share it with advertisers, or use it to train AI models.</p>
@@ -106,7 +116,7 @@
   </ul>
 
   <h2>5. Cookies and tracking</h2>
-  <p>We don't use cookies, analytics, advertising trackers, or browser storage for visitors. Moderators' browsers keep their sign-in for the current tab only (session storage), which is cleared when the tab closes.</p>
+  <p>We don't use analytics, advertising trackers, or tracking cookies.<!--if:BANK_AGE_CHECK--> We use two strictly necessary cookies for the age check: one that links your browser to the check while you're at your bank (deleted when you return, or after 10 minutes), and the signed "18+ confirmed" cookie described above ({{AGE_PASS_HOURS}} hours). Neither identifies you.<!--endif--> Moderators' browsers keep their sign-in for the current tab only (session storage), which is cleared when the tab closes.</p>
 
   <h2>6. Security</h2>
   <p>Connections are encrypted (HTTPS). Moderator access is password-protected and rate-limited. Network addresses are hashed with a secret key before anything is stored, and stored data is limited to what's listed above. No system is perfectly secure. If we have a data breach that puts you at risk, we'll tell the relevant authorities and, where we can, you.</p>

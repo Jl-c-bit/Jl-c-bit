@@ -13,13 +13,88 @@
   let activeChat = null;
   let reportTarget = null;
 
-  // ---------- gate ----------
-  $('#gate-yes').addEventListener('click', () => {
+  // ---------- gate & age check ----------
+  function showJoin() {
     show('join');
     const max = new Date();
     max.setFullYear(max.getFullYear() - 18);
     $('input[name=dob]').max = max.toISOString().slice(0, 10);
-  });
+  }
+
+  async function ageStatus() {
+    try {
+      return await (await fetch('/verify/status', { cache: 'no-store' })).json();
+    } catch {
+      return { required: false, verified: true };
+    }
+  }
+
+  function bankButton(b) {
+    const li = document.createElement('li');
+    const btn = document.createElement('button');
+    btn.className = 'bank';
+    btn.type = 'button';
+    if (b.logo) {
+      const img = document.createElement('img');
+      img.src = b.logo;
+      img.alt = '';
+      img.loading = 'lazy';
+      btn.append(img);
+    }
+    btn.append(document.createTextNode(b.name));
+    btn.addEventListener('click', async () => {
+      for (const x of document.querySelectorAll('.bank')) x.disabled = true;
+      $('#verify-msg').textContent = '';
+      try {
+        const res = await fetch('/verify/start', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ bankId: b.id }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Could not reach your bank.');
+        location.assign(data.authUrl);
+      } catch (err) {
+        $('#verify-msg').textContent = err.message;
+        for (const x of document.querySelectorAll('.bank')) x.disabled = false;
+      }
+    });
+    li.append(btn);
+    return li;
+  }
+
+  async function showVerify(message = '') {
+    show('verify');
+    $('#verify-msg').textContent = message;
+    const ul = $('#banks');
+    try {
+      const res = await fetch('/verify/banks', { cache: 'no-store' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      ul.textContent = '';
+      const main = data.banks.filter((b) => !b.fallback);
+      const fallback = data.banks.filter((b) => b.fallback);
+      main.sort((a, b) => a.name.localeCompare(b.name)).forEach((b) => ul.append(bankButton(b)));
+      if (!main.length) ul.innerHTML = '<li class="muted small">No banks are available right now.</li>';
+      $('#fallback').textContent = '';
+      fallback.forEach((b) => $('#fallback').append(bankButton(b)));
+      $('#fallback-wrap').hidden = !fallback.length;
+    } catch (err) {
+      ul.innerHTML = '';
+      const li = document.createElement('li');
+      li.className = 'error';
+      li.textContent = err.message || 'Age verification is unavailable right now.';
+      ul.append(li);
+    }
+  }
+
+  async function enter() {
+    const s = await ageStatus();
+    if (s.required && !s.verified) return showVerify();
+    showJoin();
+  }
+
+  $('#gate-yes').addEventListener('click', enter);
 
   // ---------- join ----------
   $('#join-form').addEventListener('submit', (e) => {
@@ -41,6 +116,7 @@
     $('#join-error').textContent = '';
     if (!socket.connected) socket.connect();
     socket.emit('join', payload, (res) => {
+      if (res.needsVerification) return void showVerify(res.error);
       if (!res.ok) return void ($('#join-error').textContent = res.error);
       me = res.me;
       $('#me-label').textContent = `${me.nickname}, ${me.age}`;
@@ -239,4 +315,27 @@
       for (const id of chats.keys()) addMsg(id, 'Connection lost. Refresh to rejoin.', 'system');
     }
   });
+
+  // Coming back from the bank.
+  const AGE_MESSAGES = {
+    cancelled: 'You cancelled at your bank. You need to confirm you are 18+ to use Afterhours.',
+    failed: "We couldn't confirm your age. Please try again, or choose another option.",
+    expired: 'That took too long or was started in another browser. Please try again.',
+  };
+  function handleAgeReturn() {
+  const ageResult = new URLSearchParams(location.search).get('age');
+  if (ageResult) {
+    history.replaceState(null, '', location.pathname);
+    if (ageResult === 'verified') {
+      showJoin();
+      $('#join-error').textContent = '';
+      $('#join .muted').insertAdjacentHTML('beforebegin', '<p class="ok">✓ Your bank confirmed you are 18+.</p>');
+    } else if (ageResult === 'under18') {
+      document.body.innerHTML = '<div class="card narrow"><h2>Afterhours is for adults only</h2><p>Your bank told us you are under 18, so you can\'t use this site.</p><p>If you need someone to talk to, Kids Helpline is free and confidential: <strong>1800 55 1800</strong> or <a href="https://kidshelpline.com.au">kidshelpline.com.au</a>.</p></div>';
+    } else {
+      showVerify(AGE_MESSAGES[ageResult] || AGE_MESSAGES.failed);
+    }
+    }
+  }
+  handleAgeReturn();
 })();

@@ -74,6 +74,62 @@ Tests: `TEST_DATABASE_URL=postgres://… npm test` also runs the database tests
 (including restarting the server and checking bans survive). CI does this
 automatically.
 
+## Age verification (ConnectID)
+
+People can prove they're 18+ through their own bank using
+[ConnectID](https://connectid.com.au) (Australian Payments Plus). Afterhours asks
+for exactly one claim, `over18`, and gets back yes or no — never a name, date
+of birth or account details. A "yes" gives the browser a signed cookie valid
+for 12 hours (`AGE_PASS_HOURS`); nothing is stored on the server. Joining is
+refused without it.
+
+| `AGE_VERIFICATION` | What happens |
+|---|---|
+| `none` (default) | Self-declared date of birth only. |
+| `mock` | A **pretend bank** for development and tests. Refused when `NODE_ENV=production`. |
+| `connectid` | Real bank checks. Needs the ConnectID SDK and the settings below. |
+
+Try it locally: `AGE_VERIFICATION=mock npm start`, then click through.
+
+### Going live with ConnectID
+
+1. **Become a ConnectID relying party.** Contact ConnectID (connectid.com.au →
+   business enquiries). You'll need your ABN, a commercial agreement and their
+   onboarding/accreditation steps. Ask about per-check pricing, and tell them
+   the use case up front (18+ dating site; `over18` claim only).
+2. **Sandbox first.** They give you access to the sandbox directory, where you
+   create a software statement, generate your signing and transport
+   certificates, and register the redirect URI
+   `https://YOUR-DOMAIN/verify/callback`.
+3. **Install the SDK** — only once you're an approved participant (its licence
+   requires it): `npm install @connectid-tools/rp-nodejs-sdk`. On Render the
+   build command already does this automatically when `AGE_VERIFICATION=connectid`.
+4. **Set these** (Render → Environment; put certificates and keys in as
+   secret values — paste the PEM text, `\n` line breaks are fine):
+
+| Setting | From the ConnectID directory |
+|---|---|
+| `AGE_VERIFICATION` | `connectid` |
+| `CONNECTID_CLIENT_ID` | Software Statement → Client Details → Client ID |
+| `CONNECTID_SIGNING_KID` | Software Statement → Certificates → signing key id |
+| `CONNECTID_SIGNING_KEY`, `CONNECTID_SIGNING_PEM` | Your signing key and certificate |
+| `CONNECTID_TRANSPORT_KEY`, `CONNECTID_TRANSPORT_PEM` | Your transport (mutual TLS) key and certificate |
+| `CONNECTID_CA_PEM` | ConnectID's trusted root certificates |
+| `CONNECTID_REGISTRY_URI` | Participants endpoint (sandbox: `https://data.directory.sandbox.connectid.com.au/participants`) |
+| `CONNECTID_REDIRECT_URI` | `https://YOUR-DOMAIN/verify/callback` (must match the directory) |
+| `CONNECTID_INCLUDE_UNCERTIFIED` | `1` in the **sandbox only**, to see test banks |
+
+   Each certificate/key setting also accepts a file path via `…_FILE`
+   (e.g. `CONNECTID_SIGNING_KEY_FILE=/etc/secrets/signing.key`).
+5. The server checks everything at startup and refuses to start if the SDK or
+   a setting is missing, rather than silently running without age checks.
+   The moderator dashboard shows which age check is active.
+
+When bank checks are on, `/privacy` and `/terms` automatically gain sections
+explaining ConnectID, the cookie, and that **the person's bank will see that
+Afterhours asked** — worth knowing for a site like this, and something some
+users will care about.
+
 ## Terms of Service and Privacy Policy
 
 Served at `/terms` and `/privacy` from `views/terms.html` and `views/privacy.html`,
@@ -138,10 +194,10 @@ privacy law to review it.
 
 **Online Safety Act (eSafety Commissioner)**
 3. **Age assurance.** The registered online safety industry codes cover
-   dating services, and eSafety's position is that self-declared ages (like
-   our date-of-birth box) aren't effective. Several code measures for dating
-   services depend on whether you use age assurance. Add a real provider
-   before launch — e.g. ConnectID, Yoti, or Persona — and name it in `/privacy`.
+   dating services, and eSafety's position is that self-declared ages aren't
+   effective. ConnectID bank checks are built in (see *Age verification*
+   above) — finish ConnectID onboarding and set `AGE_VERIFICATION=connectid`
+   before launch.
 4. **Read the codes that apply to you** in eSafety's *Online Safety Codes and
    Standards Regulatory Guidance* (Sept 2026) and the Basic Online Safety
    Expectations guidance. Most of what they ask — reporting tools, terms
