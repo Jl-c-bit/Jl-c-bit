@@ -123,16 +123,56 @@ Note: Render's *free* Postgres is deleted after 30 days. Either upgrade it
 Railway and Fly.io also work: set the environment variables above, build
 `npm ci`, start `npm start`.
 
-## Before opening it to the public
+## Before opening it to the public (operator based in NSW, Australia)
 
-This is a working prototype. A real launch needs:
+This is a working prototype. A real launch needs the following. **This is a
+checklist, not legal advice** — get a lawyer who knows online safety and
+privacy law to review it.
 
-1. **Real age verification.** Many places (UK Online Safety Act, several US
-   states, France, Australia) legally require more than a checkbox for sites
-   with sexual content. Use a provider such as Yoti, Veriff, or Persona.
-2. **Legal review** of `/terms` and `/privacy`, and a monitored `CONTACT_EMAIL` inbox.
-3. **Human moderation** and a process to report child exploitation to NCMEC
-   (US) / IWF (UK) if it ever appears.
-4. **Individual moderator accounts** instead of one shared password, once you have more than a couple of moderators.
-5. Avoid anything that facilitates paid sex — in the US, FOSTA-SESTA makes
-   site operators liable. The selling filter helps but isn't a substitute for moderation.
+**Business basics**
+1. **ABN** (free, abr.gov.au) and, if you trade as "Afterhours" or another
+   name that isn't your own, **register the business name with ASIC**.
+   A `.com.au` domain needs an ABN.
+2. Fill in the legal-page settings: `OPERATOR_NAME` (your name or business,
+   ideally with the ABN), a monitored `CONTACT_EMAIL`, `LEGAL_EFFECTIVE_DATE`.
+
+**Online Safety Act (eSafety Commissioner)**
+3. **Age assurance.** The registered online safety industry codes cover
+   dating services, and eSafety's position is that self-declared ages (like
+   our date-of-birth box) aren't effective. Several code measures for dating
+   services depend on whether you use age assurance. Add a real provider
+   before launch — e.g. ConnectID, Yoti, or Persona — and name it in `/privacy`.
+4. **Read the codes that apply to you** in eSafety's *Online Safety Codes and
+   Standards Regulatory Guidance* (Sept 2026) and the Basic Online Safety
+   Expectations guidance. Most of what they ask — reporting tools, terms
+   against illegal content, acting on reports, cooperating with police — is
+   built in; check the dating-services measures line by line.
+5. **Online Dating Industry Code** (australianonlinedatingcode.com.au). Voluntary
+   today, but eSafety is reviewing it in 2026 and the government has said it
+   may become mandatory. Aligning early is cheap: it expects published safety
+   policies, in-app reporting, banning repeat offenders, support resources for
+   people who've been harmed, and working with police.
+6. **Child abuse material:** if you ever become aware of it, refer it to the
+   AFP — report through the ACCCE (accce.gov.au/report). Under the Criminal
+   Code, content hosts must refer details to the AFP within a reasonable time.
+
+**Privacy Act 1988**
+7. Businesses under $3M turnover are currently exempt, but the government has
+   agreed in principle to remove that exemption (not yet legislated as of
+   late 2026), and the statutory privacy tort applies regardless. The privacy
+   policy is written to the Australian Privacy Principles so you're covered
+   either way. You can also opt in to the Privacy Act voluntarily (OAIC "opt-in
+   register") — a good trust signal for a site like this.
+8. Data is hosted in **Singapore** (Render has no Australian region). That's
+   allowed, and disclosed in `/privacy`. If you'd rather keep data onshore,
+   Fly.io (Sydney region) plus a Neon or Supabase database in Sydney works too
+   — update `HOSTING_REGION`.
+
+**Running it safely**
+9. **Human moderation** — someone checking `/mod/` regularly, and the
+   `CONTACT_EMAIL` inbox for appeals.
+10. **Individual moderator accounts** instead of one shared password, once you
+    have more than a couple of moderators.
+11. **No paid sex on the platform.** Sex work is decriminalised in NSW, but
+    users are in other states and countries, and payments are the main vector
+    for scams, sextortion and trafficking. Keep the selling filter and ban for it.

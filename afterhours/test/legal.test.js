@@ -28,8 +28,12 @@ test('terms and privacy pages are served with settings filled in', async (t) => 
   assert.ok(privacy.includes('90 days'), 'retention period shown');
   const terms = await (await fetch(base + '/terms')).text();
   assert.ok(terms.includes('England and Wales'));
+  assert.ok(terms.includes('Australian Consumer Law') && terms.includes('ACCCE') && terms.includes('esafety.gov.au/report'), 'Australian terms');
+  assert.ok(privacy.includes('Australian Privacy Principles') && privacy.includes('oaic.gov.au'), 'Australian privacy');
+  assert.ok(!/NCMEC|USD/.test(terms + privacy), 'no US-specific leftovers');
 
   const home = await (await fetch(base + '/')).text();
   assert.ok(home.includes('href="/terms"') && home.includes('href="/privacy"'), 'home links to both');
   assert.ok(home.includes('name="consentData"'), 'consent checkbox present');
+  assert.ok(home.includes('1800 737 732') && home.includes('13 11 14'), 'Australian support lines in safety tips');
 });
