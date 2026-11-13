@@ -6,6 +6,7 @@ const crypto = require('crypto');
 const express = require('express');
 const { Server } = require('socket.io');
 const core = require('./lib/core');
+const { createStore } = require('./lib/store');
 
 const PORT = Number(process.env.PORT) || 3000;
 // The moderator dashboard is disabled unless a strong password is configured.
@@ -33,17 +34,18 @@ app.use('/mod', (req, res, next) => {
 app.use(express.static(path.join(__dirname, 'public')));
 app.get('/healthz', (req, res) => res.send('ok'));
 
+const store = createStore();
 const server = http.createServer(app);
 const io = new Server(server, { maxHttpBufferSize: 8 * 1024 });
 const mods = io.of('/mod');
 
 // ---- In-memory state (nothing is written to disk; restart wipes everything) ----
-const users = new Map(); // id -> { id, socketId, ip, profile, blocked:Set, reportedBy:Set, strikes, joinedAt }
+const users = new Map(); // id -> { id, socketId, ipHash, profile, blocked:Set, reportedBy:Set, strikes, joinedAt }
 const requests = new Map(); // `${from}>${to}` -> timestamp
 const chats = new Map(); // chatId -> { a, b, log: [{ from, text, at }] }
 const endedLogs = new Map(); // chatId -> { log, endedAt } kept briefly so a report after leaving still has context
 const reports = []; // newest first
-const bans = new Map(); // banId -> { id, ip, nickname, reason, by, at, until }
+const bans = new Map(); // banId -> { id, ipHash, nickname, reason, by, at, until }
 const activity = []; // newest first, moderation-relevant events only
 
 const CHAT_LOG_KEEP = 20; // messages kept per chat; only ever shown to moderators when someone reports
@@ -66,14 +68,22 @@ function ipOf(socket) {
   return socket.handshake.address || '';
 }
 
-// Moderators see a short fingerprint, never the raw IP.
-function ipTag(ip) {
-  return ip ? crypto.createHash('sha256').update('afterhours:' + ip).digest('hex').slice(0, 8) : '—';
+// Raw IP addresses are never stored or shown. Bans match on a keyed hash
+// (secret from IP_HASH_SECRET or generated once and kept in the database),
+// and moderators see only its first 8 characters.
+let ipSecret = null;
+function hashIp(ip) {
+  return ip ? crypto.createHmac('sha256', ipSecret).update(ip).digest('hex') : '';
+}
+function ipTag(ipHash) {
+  return ipHash ? ipHash.slice(0, 8) : '—';
 }
 
 function log(type, text) {
-  activity.unshift({ id: crypto.randomUUID(), type, text, at: Date.now() });
+  const entry = { id: crypto.randomUUID(), type, text, at: Date.now() };
+  activity.unshift(entry);
   activity.length = Math.min(activity.length, MAX_ACTIVITY);
+  store.saveActivity(entry);
   pushModState();
 }
 
@@ -83,19 +93,25 @@ function pruneBans() {
   for (const b of bans.values()) if (b.until && b.until < now) bans.delete(b.id);
 }
 
-function activeBanFor(ip) {
+function activeBanFor(ipHash) {
   pruneBans();
-  for (const b of bans.values()) if (b.ip === ip) return b;
+  for (const b of bans.values()) if (b.ipHash === ipHash) return b;
   return null;
 }
 
-function addBan(ip, { nickname = '', reason, by, ms = AUTO_BAN_MS }) {
-  if (!ip) return null;
-  const existing = activeBanFor(ip);
-  if (existing) bans.delete(existing.id);
-  const b = { id: crypto.randomUUID(), ip, nickname, reason, by, at: Date.now(), until: ms ? Date.now() + ms : null };
+function addBan(ipHash, { nickname = '', reason, by, ms = AUTO_BAN_MS }) {
+  if (!ipHash) return null;
+  const existing = activeBanFor(ipHash);
+  if (existing) removeBan(existing.id);
+  const b = { id: crypto.randomUUID(), ipHash, nickname, reason, by, at: Date.now(), until: ms ? Date.now() + ms : null };
   bans.set(b.id, b);
+  store.saveBan(b);
   return b;
+}
+
+function removeBan(id) {
+  bans.delete(id);
+  store.deleteBan(id);
 }
 
 // ---- lobby ----
@@ -163,7 +179,7 @@ function removeUser(id, { reason = 'left' } = {}) {
 
 // Removes a user and disconnects them with a message. Optionally bans their IP.
 function expel(u, { message, ban = null }) {
-  if (ban) addBan(u.ip, { nickname: u.profile.nickname, ...ban });
+  if (ban) addBan(u.ipHash, { nickname: u.profile.nickname, ...ban });
   const s = io.sockets.sockets.get(u.socketId);
   removeUser(u.id, { reason: 'removed' });
   s?.emit('fatal', message);
@@ -175,6 +191,7 @@ function modSnapshot() {
   pruneBans();
   return {
     at: Date.now(),
+    persistent: store.kind === 'postgres',
     stats: {
       online: users.size,
       chats: chats.size,
@@ -183,14 +200,14 @@ function modSnapshot() {
     },
     users: [...users.values()].map((u) => ({
       ...publicProfile(u),
-      ipTag: ipTag(u.ip),
+      ipTag: ipTag(u.ipHash),
       joinedAt: u.joinedAt,
       reports: u.reportedBy.size,
       strikes: u.strikes,
       chats: [...chats.values()].filter((c) => c.a === u.id || c.b === u.id).length,
     })),
-    reports: reports.slice(0, 200),
-    bans: [...bans.values()].map(({ ip, ...b }) => ({ ...b, ipTag: ipTag(ip) })),
+    reports: reports.slice(0, 200).map(({ targetIpHash, ...r }) => r),
+    bans: [...bans.values()].map(({ ipHash, ...b }) => ({ ...b, ipTag: ipTag(ipHash) })),
     activity: activity.slice(0, 150),
   };
 }
@@ -206,10 +223,10 @@ function pushModState() {
 
 // ---- member connections ----
 io.on('connection', (socket) => {
-  const ip = ipOf(socket);
+  const ipHash = hashIp(ipOf(socket));
   let me = null;
 
-  if (activeBanFor(ip)) {
+  if (activeBanFor(ipHash)) {
     socket.emit('fatal', 'You have been removed from Afterhours.');
     socket.disconnect(true);
     return;
@@ -221,8 +238,8 @@ io.on('connection', (socket) => {
     if (!result.ok) {
       ack({ ok: false, error: result.error });
       if (result.underage) {
-        addBan(ip, { nickname: String(input?.nickname || '').slice(0, 24), reason: 'Under-18 details at sign-up', by: 'auto' });
-        log('auto', `Refused sign-up with under-18 details (${ipTag(ip)}). Banned 24h.`);
+        addBan(ipHash, { nickname: String(input?.nickname || '').slice(0, 24), reason: 'Under-18 details at sign-up', by: 'auto' });
+        log('auto', `Refused sign-up with under-18 details (${ipTag(ipHash)}). Banned 24h.`);
         socket.emit('fatal', 'Afterhours is strictly 18+.');
         socket.disconnect(true);
       }
@@ -231,7 +248,7 @@ io.on('connection', (socket) => {
     me = {
       id: crypto.randomUUID(),
       socketId: socket.id,
-      ip,
+      ipHash,
       profile: result.profile,
       blocked: new Set(),
       reportedBy: new Set(),
@@ -336,7 +353,8 @@ io.on('connection', (socket) => {
       status: 'open',
       reason: why,
       reporter: me.profile.nickname,
-      target: { ...publicProfile(t), ipTag: ipTag(t.ip) },
+      target: { ...publicProfile(t), ipTag: ipTag(t.ipHash) },
+      targetIpHash: t.ipHash, // server-side only, so moderators can ban after they leave
       targetReports: t.reportedBy.size,
       excerpt: chatLogBetween(me.id, t.id).slice(),
       outcome: null,
@@ -358,6 +376,7 @@ io.on('connection', (socket) => {
       log('report', `${me.profile.nickname} reported ${t.profile.nickname} (${why}).`);
       broadcastLobby();
     }
+    store.saveReport(report);
     ack({ ok: true });
   });
 
@@ -419,18 +438,17 @@ mods.on('connection', (socket) => {
       log('mod', `${modName} banned ${u.profile.nickname} (${length}): ${why}`);
       expel(u, { message: 'You have been banned from Afterhours by a moderator.', ban: { reason: why, by: modName, ms } });
     } else if (report) {
-      // They've gone (left, or were auto-removed). If an auto-ban holds their address, replace it.
-      pruneBans();
-      const existing = [...bans.values()].find((b) => ipTag(b.ip) === report.target.ipTag);
-      if (!existing) return ack({ ok: false, error: 'They are offline and their address is no longer held, so they cannot be banned now.' });
-      addBan(existing.ip, { nickname: report.target.nickname, reason: why, by: modName, ms });
-      log('mod', `${modName} changed ${report.target.nickname}'s ban to ${length}: ${why}`);
+      // They've gone (left, or were auto-removed): ban the address recorded with the report.
+      if (!report.targetIpHash) return ack({ ok: false, error: 'No address was recorded for this report, so it cannot be banned.' });
+      addBan(report.targetIpHash, { nickname: report.target.nickname, reason: why, by: modName, ms });
+      log('mod', `${modName} banned ${report.target.nickname} (${length}, offline): ${why}`);
     } else {
       return ack({ ok: false, error: 'User is no longer online.' });
     }
     if (report) {
       report.status = 'resolved';
       report.outcome = `Banned ${length} by ${modName}`;
+      store.saveReport(report);
     }
     pushModState();
     ack({ ok: true });
@@ -439,8 +457,8 @@ mods.on('connection', (socket) => {
   socket.on('unban', ({ banId } = {}, ack = () => {}) => {
     const b = bans.get(banId);
     if (!b) return ack({ ok: false, error: 'Ban not found.' });
-    bans.delete(banId);
-    log('mod', `${modName} lifted the ban on ${b.nickname || ipTag(b.ip)}.`);
+    removeBan(banId);
+    log('mod', `${modName} lifted the ban on ${b.nickname || ipTag(b.ipHash)}.`);
     ack({ ok: true });
   });
 
@@ -459,20 +477,60 @@ mods.on('connection', (socket) => {
     const what = String(outcome).trim().slice(0, 60) || 'Dismissed';
     r.status = 'resolved';
     r.outcome = `${what} by ${modName}`;
+    store.saveReport(r);
     log('mod', `${modName} closed the report on ${r.target.nickname}: ${what}.`);
     ack({ ok: true });
   });
 });
 
-if (require.main === module) {
-  server.listen(PORT, () => {
-    console.log(`Afterhours listening on http://localhost:${PORT}`);
-    console.log(
-      MOD_ENABLED
-        ? `Moderator dashboard: http://localhost:${PORT}/mod/`
-        : 'Moderator dashboard disabled: set MOD_PASSWORD (12+ characters) to enable it.'
-    );
-  });
+// ---- startup: load saved moderation data before accepting anyone ----
+const ready = store.init().then((saved) => {
+  ipSecret = saved.secret;
+  for (const b of saved.bans) bans.set(b.id, b);
+  reports.push(...saved.reports);
+  activity.push(...saved.activity);
+  return saved;
+});
+
+const pruneTimer = setInterval(() => {
+  store.prune().catch((err) => console.error('[db] prune failed:', err.message));
+}, 6 * 3600e3);
+pruneTimer.unref();
+
+async function shutdown() {
+  clearInterval(pruneTimer);
+  io.close();
+  await store.close();
 }
 
-module.exports = { server, io };
+if (require.main === module) {
+  ready
+    .then((saved) => {
+      server.listen(PORT, () => {
+        console.log(`Afterhours listening on http://localhost:${PORT}`);
+        console.log(
+          store.kind === 'postgres'
+            ? `Database: connected (${saved.bans.length} active bans, ${saved.reports.length} reports loaded)`
+            : 'Database: none (DATABASE_URL not set) — bans and reports reset on restart'
+        );
+        console.log(
+          MOD_ENABLED
+            ? `Moderator dashboard: http://localhost:${PORT}/mod/`
+            : 'Moderator dashboard disabled: set MOD_PASSWORD (12+ characters) to enable it.'
+        );
+      });
+    })
+    .catch((err) => {
+      console.error('Could not start: database unavailable —', err.message);
+      process.exit(1);
+    });
+
+  for (const sig of ['SIGTERM', 'SIGINT']) {
+    process.on(sig, () => {
+      server.close();
+      shutdown().finally(() => process.exit(0));
+    });
+  }
+}
+
+module.exports = { server, io, ready, store, shutdown };

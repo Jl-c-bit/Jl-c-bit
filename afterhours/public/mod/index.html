@@ -25,6 +25,7 @@
       <strong>Afterhours · Moderation</strong>
       <span id="conn" class="pill">connecting…</span>
       <span id="whoami" class="muted"></span>
+      <span id="db" class="pill" hidden></span>
       <button id="logout" class="ghost small push-right">Sign out</button>
     </header>
 
@@ -57,7 +58,7 @@
       </section>
 
       <section data-panel="bans" hidden>
-        <p class="muted small">Bans apply to the person's network address (shown as a fingerprint, never the real address). They are cleared if the server restarts.</p>
+        <p class="muted small">Bans apply to the person's network address (shown as a fingerprint, never the real address). <span id="persist-note"></span></p>
         <ul id="bans" class="cards"></ul>
       </section>
 
@@ -75,7 +76,7 @@
           <option value="24h">24 hours</option>
           <option value="7d">7 days</option>
           <option value="30d">30 days</option>
-          <option value="permanent">Until server restart (permanent)</option>
+          <option value="permanent">Permanent</option>
         </select>
       </label>
       <label>Reason <input name="reason" maxlength="120" placeholder="e.g. Harassment after being told no"></label>

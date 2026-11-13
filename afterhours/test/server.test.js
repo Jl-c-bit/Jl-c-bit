@@ -2,7 +2,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const { io: client } = require('socket.io-client');
-const { server, io } = require('../server');
+const { server, io, ready } = require('../server');
 
 const once = (s, ev) => new Promise((r) => s.once(ev, r));
 const emit = (s, ev, data) => new Promise((r) => s.emit(ev, data, r));
@@ -17,6 +17,7 @@ const profile = (over) => ({
 });
 
 test('end-to-end: match, consent to chat, message, safety filters', async (t) => {
+  await ready;
   await new Promise((r) => server.listen(0, r));
   const url = `http://localhost:${server.address().port}`;
   const opts = { transports: ['websocket'], forceNew: true };

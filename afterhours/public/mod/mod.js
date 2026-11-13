@@ -27,7 +27,7 @@
     return `${Math.round(s / 86400)}d ago`;
   }
   function until(t) {
-    if (!t) return 'until server restart';
+    if (!t) return 'permanent';
     const m = Math.round((t - Date.now()) / 60000);
     return m < 60 ? `${m}m left` : m < 1440 ? `${Math.round(m / 60)}h left` : `${Math.round(m / 1440)}d left`;
   }
@@ -148,6 +148,14 @@
     $('#s-bans').textContent = st.bans;
     $('#s-open').parentElement.classList.toggle('alert', st.openReports > 0);
     $('#b-reports').textContent = st.openReports || '';
+    const db = $('#db');
+    db.hidden = false;
+    db.className = 'pill ' + (state.persistent ? 'live' : 'down');
+    db.textContent = state.persistent ? 'saved to database' : 'no database';
+    db.title = state.persistent ? '' : 'Bans and reports will be lost when the server restarts. Set DATABASE_URL.';
+    $('#persist-note').textContent = state.persistent
+      ? ' Bans are saved and survive restarts.'
+      : ' No database is connected, so bans are cleared if the server restarts.';
     document.title = (st.openReports ? `(${st.openReports}) ` : '') + 'Afterhours Moderation';
     renderReports();
     renderUsers();

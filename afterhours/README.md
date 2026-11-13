@@ -41,8 +41,33 @@ npm test                                         # dashboard: http://localhost:3
 | Setting | What it does |
 |---|---|
 | `MOD_PASSWORD` | Turns on the moderator dashboard at `/mod/`. Must be 12+ characters; without it the dashboard is off. |
+| `DATABASE_URL` | Postgres connection string. Saves bans, reports and the moderation log so they survive restarts. Without it everything is in memory. |
+| `IP_HASH_SECRET` | Optional. Key used to hash IP addresses. If unset, one is generated and kept in the database. |
+| `RETENTION_DAYS` | Optional, default 90. How long closed reports (with chat excerpts) and the activity log are kept. |
 | `TRUST_PROXY=1` | Set this on Render/Railway/Fly so bans use the visitor's real address, not the host's load balancer. |
 | `PORT` | Set automatically by most hosts. |
+
+## Database
+
+With `DATABASE_URL` set, Afterhours creates its tables on first start
+(`bans`, `reports`, `activity`, `settings`) — no migration step needed.
+
+What is stored, and what isn't:
+
+| Stored | Not stored |
+|---|---|
+| Active bans (nickname, reason, who, expiry) | Profiles of people who weren't reported |
+| Reports, incl. the last 20 messages of the reported chat | Any other chat messages |
+| Moderation activity log | Raw IP addresses — only a keyed hash, useless without the secret |
+
+Expired bans are deleted automatically; closed reports and log entries after
+`RETENTION_DAYS`. If the database goes down while running, the site keeps
+working and logs the failed writes; if it's down at startup, the server refuses
+to start rather than run without your bans.
+
+Tests: `TEST_DATABASE_URL=postgres://… npm test` also runs the database tests
+(including restarting the server and checking bans survive). CI does this
+automatically.
 
 ## Moderator dashboard (`/mod/`)
 
@@ -63,11 +88,20 @@ Privacy: moderators never see raw IP addresses (only an 8-character fingerprint)
 and chats are only visible if someone reports them. 5 wrong passwords lock that
 address out for 15 minutes.
 
-## Hosting (free tiers)
+## Hosting
 
 Needs a host that supports WebSockets — **not** Netlify static/functions.
-Render, Railway, or Fly.io all work: point them at this folder,
-build `npm install`, start `npm start`.
+
+**Easiest: Render Blueprint.** The repo root has a `render.yaml`. On render.com
+choose New → Blueprint → this repo. It creates the site and a Postgres
+database, links them, and asks you for `MOD_PASSWORD`.
+
+Note: Render's *free* Postgres is deleted after 30 days. Either upgrade it
+(~$6/month) before then, or use a free database from Neon or Supabase and set
+`DATABASE_URL` to its connection string (include `?sslmode=require`).
+
+Railway and Fly.io also work: set the environment variables above, build
+`npm ci`, start `npm start`.
 
 ## Before opening it to the public
 
@@ -79,7 +113,6 @@ This is a working prototype. A real launch needs:
 2. **Terms of service and privacy policy**, and a way to receive abuse reports by email.
 3. **Human moderation** and a process to report child exploitation to NCMEC
    (US) / IWF (UK) if it ever appears.
-4. **Persistent bans and reports** (database) — today they reset when the server restarts.
-5. **Individual moderator accounts** instead of one shared password, once you have more than a couple of moderators.
-6. Avoid anything that facilitates paid sex — in the US, FOSTA-SESTA makes
+4. **Individual moderator accounts** instead of one shared password, once you have more than a couple of moderators.
+5. Avoid anything that facilitates paid sex — in the US, FOSTA-SESTA makes
    site operators liable. The selling filter helps but isn't a substitute for moderation.

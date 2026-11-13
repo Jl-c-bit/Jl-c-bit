@@ -58,3 +58,4 @@ dialog select { width: 100%; }
   #whoami { display: none; }
   .topbar { gap: .5rem; }
 }
+@media (max-width: 600px) { #db { display: none; } }
