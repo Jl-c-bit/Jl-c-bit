@@ -10,6 +10,19 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: afterhours_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v4
 
@@ -43,4 +56,10 @@ jobs:
 
       - name: Test Connect demo and site functions
         working-directory: connect-demo
+        run: npm ci --no-audit --no-fund && npm test
+
+      - name: Test Afterhours (with Postgres)
+        working-directory: afterhours
+        env:
+          TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/afterhours_test
         run: npm ci --no-audit --no-fund && npm test

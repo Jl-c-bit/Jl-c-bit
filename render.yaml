@@ -1,0 +1,54 @@
+# Render Blueprint for Afterhours (render.com → New → Blueprint → pick this repo).
+# Creates the web service and a Postgres database and wires them together.
+# You'll be asked for MOD_PASSWORD (12+ characters) and the legal-page details
+# (OPERATOR_NAME, CONTACT_EMAIL, LEGAL_EFFECTIVE_DATE) during setup.
+# Runs in Singapore, Render's closest region to Australia; HOSTING_REGION matches.
+services:
+  - type: web
+    name: afterhours
+    runtime: node
+    rootDir: afterhours
+    plan: free
+    region: singapore   # closest Render region to Australia
+    # The ConnectID SDK is only installed once AGE_VERIFICATION includes connectid
+    # (its licence is for approved ConnectID participants).
+    buildCommand: >-
+      npm ci --omit=dev --no-audit --no-fund &&
+      if echo "$AGE_VERIFICATION" | grep -qi connectid; then npm install --no-save --no-audit --no-fund @connectid-tools/rp-nodejs-sdk@6.1.0; fi
+    startCommand: npm start
+    healthCheckPath: /healthz
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: afterhours-db
+          property: connectionString
+      - key: MOD_PASSWORD
+        sync: false
+      - key: OPERATOR_NAME
+        sync: false
+      - key: CONTACT_EMAIL
+        sync: false
+      - key: GOVERNING_LAW
+        value: New South Wales, Australia
+      - key: LEGAL_EFFECTIVE_DATE
+        sync: false
+      - key: HOSTING_REGION
+        value: Singapore
+      # Change to "yoti", "connectid" or "yoti,connectid" once onboarded, and add the
+      # YOTI_* / CONNECTID_* settings listed in afterhours/README.md as secret variables.
+      # (PUBLIC_URL is picked up automatically from Render.)
+      - key: AGE_VERIFICATION
+        value: none
+      - key: TRUST_PROXY
+        value: "1"
+      - key: IP_HASH_SECRET
+        generateValue: true
+      - key: NODE_VERSION
+        value: "22"
+
+databases:
+  - name: afterhours-db
+    plan: free
+    region: singapore
+    databaseName: afterhours
+    user: afterhours
