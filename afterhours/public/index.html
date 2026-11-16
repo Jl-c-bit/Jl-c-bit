@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <meta name="rating" content="adult">
+  <title>Afterhours — 18+</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Age gate -->
+  <section id="gate" class="screen card narrow">
+    <h1>Afterhours</h1>
+    <p class="lead">A free place for adults to meet strangers, talk, and decide for themselves whether to take things further.</p>
+    <p class="warn"><strong>18+ only.</strong> This site is for consenting adults and may contain sexual conversation.</p>
+    <div class="row">
+      <button id="gate-yes" class="primary">I am 18 or older — enter</button>
+      <a class="button ghost" href="https://www.google.com">Leave</a>
+    </div>
+    <p class="small muted legal-links">By entering you agree to our <a href="/terms">Terms of Service</a> and <a href="/privacy">Privacy Policy</a>.</p>
+  </section>
+
+  <!-- Age check (only shown when AGE_VERIFICATION is on) -->
+  <section id="verify" class="screen card narrow" hidden>
+    <h2>Confirm you're 18+</h2>
+    <p>Before you go online, a trusted provider checks your age. We only ever learn <strong>yes or no</strong>. We never see your name, date of birth, photo, or bank details.</p>
+    <p id="verify-msg" class="error" role="alert"></p>
+    <div id="methods"><p class="muted small">Loading…</p></div>
+  </section>
+
+  <!-- Profile / join -->
+  <section id="join" class="screen card narrow" hidden>
+    <h2>Create a temporary profile</h2>
+    <p class="muted">No email, no photos, nothing saved. Your profile disappears when you close the tab.</p>
+    <form id="join-form" autocomplete="off">
+      <label>Nickname <input name="nickname" maxlength="24" required placeholder="Don't use your real name"></label>
+      <label>Date of birth <input name="dob" type="date" required></label>
+      <label>I am
+        <select name="gender">
+          <option value="woman">a woman</option>
+          <option value="man">a man</option>
+          <option value="nonbinary">nonbinary</option>
+          <option value="other">other</option>
+        </select>
+      </label>
+      <fieldset>
+        <legend>Interested in</legend>
+        <label class="chip"><input type="checkbox" name="seeking" value="woman" checked> women</label>
+        <label class="chip"><input type="checkbox" name="seeking" value="man" checked> men</label>
+        <label class="chip"><input type="checkbox" name="seeking" value="nonbinary" checked> nonbinary</label>
+        <label class="chip"><input type="checkbox" name="seeking" value="other" checked> other</label>
+      </fieldset>
+      <fieldset>
+        <legend>Looking for</legend>
+        <label class="chip"><input type="checkbox" name="intents" value="chat" checked> just chatting</label>
+        <label class="chip"><input type="checkbox" name="intents" value="flirt"> flirting</label>
+        <label class="chip"><input type="checkbox" name="intents" value="dating"> dating</label>
+        <label class="chip"><input type="checkbox" name="intents" value="hookup"> hookups</label>
+      </fieldset>
+      <label>City or area <span class="muted">(optional — keep it general)</span> <input name="city" maxlength="40"></label>
+      <label>About you <textarea name="bio" maxlength="280" rows="3" placeholder="What you're into, what you're after, your boundaries…"></textarea></label>
+
+      <details class="rules">
+        <summary>Community rules (please read)</summary>
+        <ul>
+          <li><strong>Adults only.</strong> Anyone who is, claims to be, or asks about someone under 18 is removed immediately.</li>
+          <li><strong>Consent first.</strong> Ask before getting explicit. "No", silence, or leaving the chat means stop.</li>
+          <li><strong>No selling.</strong> No payments, escorting, paid content, or links to them.</li>
+          <li><strong>No harassment, threats, or hate.</strong></li>
+          <li><strong>Privacy.</strong> Chats aren't saved. If someone reports a chat, its last 20 messages go to moderators for review.</li>
+          <li><strong>Protect yourself.</strong> Don't share your full name, address, workplace, or photos with faces until you trust someone.</li>
+        </ul>
+      </details>
+      <label class="check"><input type="checkbox" name="confirmAdult" required> I confirm I am 18 or older.</label>
+      <label class="check"><input type="checkbox" name="agreeRules" required> <span>I agree to the community rules and the <a href="/terms" target="_blank">Terms of Service</a>.</span></label>
+      <label class="check"><input type="checkbox" name="consentData" required> <span>I consent to Afterhours using who I'm interested in and what I'm looking for, which may reveal my sexual orientation, to match me with people while I'm online. <a href="/privacy" target="_blank">Privacy Policy</a></span></label>
+      <p id="join-error" class="error" role="alert"></p>
+      <button class="primary" type="submit">Go online</button>
+    </form>
+  </section>
+
+  <!-- Main app -->
+  <section id="main" class="screen" hidden>
+    <div id="notice" class="notice" role="alert" hidden><span></span><button class="ghost small" id="notice-close">OK</button></div>
+    <header class="topbar">
+      <strong>Afterhours</strong>
+      <span id="me-label" class="muted"></span>
+      <button id="safety-btn" class="ghost small">Meeting safely</button>
+      <a class="small muted hide-mobile" href="/terms" target="_blank">Terms</a>
+      <a class="small muted hide-mobile" href="/privacy" target="_blank">Privacy</a>
+    </header>
+    <div class="layout">
+      <aside class="lobby">
+        <h3>Online now <span id="count" class="muted"></span></h3>
+        <p class="muted small">Only people whose preferences match yours appear here.</p>
+        <ul id="lobby-list"></ul>
+        <div id="incoming"></div>
+      </aside>
+      <main class="chat-area">
+        <nav id="tabs" class="tabs"></nav>
+        <div id="chat-panes"></div>
+        <p id="empty" class="muted center">Send a chat request to someone in the lobby. They have to accept before you can talk.</p>
+      </main>
+    </div>
+  </section>
+
+  <dialog id="safety">
+    <h3>Meeting someone in person</h3>
+    <ul>
+      <li>Meet first in a busy public place, and get there and home on your own.</li>
+      <li>Tell a friend who you're meeting, where, and when. Share your live location.</li>
+      <li>Do a short video call first so you know they are who they say.</li>
+      <li>Talk about boundaries, protection, and STI testing before anything happens.</li>
+      <li>Consent can be withdrawn at any time. You owe no one anything.</li>
+      <li>Never send money to someone you met here.</li>
+    </ul>
+    <p class="small">In danger? Call <strong>000</strong> (Australia) or your local emergency number.<br>
+      Sexual assault or family violence support: <strong>1800RESPECT</strong> · 1800 737 732 (24/7)<br>
+      Crisis support: <strong>Lifeline</strong> · 13 11 14<br>
+      Report online abuse: <a href="https://www.esafety.gov.au/report" target="_blank" rel="noopener">eSafety Commissioner</a></p>
+    <button class="primary" id="safety-close">Got it</button>
+  </dialog>
+
+  <dialog id="report-dlg">
+    <h3>Report <span id="report-name"></span></h3>
+    <form method="dialog" id="report-form">
+      <label class="check"><input type="radio" name="reason" value="underage"> May be under 18</label>
+      <label class="check"><input type="radio" name="reason" value="harassment" checked> Harassment or no consent</label>
+      <label class="check"><input type="radio" name="reason" value="selling"> Selling / scam</label>
+      <label class="check"><input type="radio" name="reason" value="other"> Something else</label>
+      <p class="small muted">Reporting also blocks them for you. Your last 20 messages with them are shared with moderators so they can review it.</p>
+      <div class="row">
+        <button value="cancel" class="ghost">Cancel</button>
+        <button value="send" class="danger">Report</button>
+      </div>
+    </form>
+  </dialog>
+
+  <template id="person-tpl">
+    <li class="person">
+      <div><strong class="name"></strong> <span class="meta muted"></span></div>
+      <div class="tags"></div>
+      <p class="bio"></p>
+      <div class="row">
+        <button class="primary small req">Request chat</button>
+        <button class="ghost small block">Block</button>
+        <button class="ghost small report">Report</button>
+      </div>
+    </li>
+  </template>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

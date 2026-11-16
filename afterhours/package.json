@@ -1,0 +1,22 @@
+{
+  "name": "afterhours",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Free, adults-only (18+) site where strangers meet, chat, and decide for themselves whether to hook up.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test test/*.test.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "4.21.2",
+    "pg": "8.13.1",
+    "socket.io": "4.8.1"
+  },
+  "devDependencies": {
+    "socket.io-client": "4.8.1"
+  }
+}
