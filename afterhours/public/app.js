@@ -4,6 +4,7 @@
   const $ = (s, el = document) => el.querySelector(s);
   const show = (id) => {
     for (const s of document.querySelectorAll('.screen')) s.hidden = s.id !== id;
+    window.scrollTo(0, 0); // each screen starts at the top, not where the last one was scrolled to
   };
 
   const INTENT_LABEL = { chat: 'chatting', flirt: 'flirting', dating: 'dating', hookup: 'hookups' };
