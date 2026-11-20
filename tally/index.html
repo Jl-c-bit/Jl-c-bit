@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Tally: Aussie Crypto Tax Estimator</title>
+  <meta name="description" content="Estimate the tax on your crypto trades for 2026–27. Import a CSV from your exchange, apply the 50% CGT discount and carried-forward losses, and see whether to sell now or wait.">
+  <meta name="theme-color" content="#0f766e">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="top">
+    <div class="logo" aria-hidden="true">T</div>
+    <div>
+      <h1>Tally</h1>
+      <p class="sub">Aussie crypto tax estimator · 2026–27 resident rates · includes the 50% CGT discount</p>
+    </div>
+  </header>
+
+  <nav class="tabs" role="tablist">
+    <button role="tab" id="tab-trades" aria-controls="panel-trades" aria-selected="true">Tax on my trades</button>
+    <button role="tab" id="tab-wait" aria-controls="panel-wait" aria-selected="false">Sell now or wait?</button>
+  </nav>
+
+  <main>
+    <section class="card inputs">
+      <label>Other taxable income (AUD)
+        <input id="income" inputmode="decimal" placeholder="e.g. 85000" autocomplete="off">
+        <small>Salary, interest and so on, after deductions.</small>
+      </label>
+      <label>Carried-forward capital losses
+        <input id="carried" inputmode="decimal" placeholder="0" autocomplete="off">
+        <small>Net capital losses from earlier years.</small>
+      </label>
+    </section>
+
+    <div id="panel-trades" role="tabpanel" aria-labelledby="tab-trades">
+      <section class="card">
+        <h2>Import from your exchange</h2>
+        <p class="muted">Export your trade history as a CSV from CoinSpot, Swyftx, Independent Reserve, Binance and so on, then drop it here. Sells are matched to buys first-in, first-out, and only disposals in 2026–27 are added.</p>
+        <div id="drop" class="drop">
+          <input type="file" id="file" accept=".csv,text/csv,text/plain" hidden>
+          <button class="btn" id="choose">Choose CSV file</button>
+          <span class="muted">or drop it here</span>
+        </div>
+        <details>
+          <summary>Or paste CSV text</summary>
+          <textarea id="paste" rows="6" spellcheck="false" placeholder="Date,Type,Market,Amount,Total AUD&#10;01/03/2025,Buy,BTC/AUD,0.1,9000&#10;10/08/2026,Sell,BTC/AUD,0.1,15000"></textarea>
+          <button class="btn" id="paste-go">Import pasted text</button>
+        </details>
+        <div id="import-msg" class="msg" hidden></div>
+      </section>
+
+      <section class="card">
+        <div class="row-head">
+          <h2>Disposals this financial year</h2>
+          <div class="actions">
+            <button class="btn ghost" id="clear">Clear</button>
+            <button class="btn primary" id="add">+ Add trade</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Coin</th><th>Bought</th><th>Sold / swapped</th><th class="num">Cost (AUD)</th><th class="num">Proceeds (AUD)</th><th class="num">Gain</th><th>Type</th><th><span class="sr">Remove</span></th></tr>
+            </thead>
+            <tbody id="rows"></tbody>
+          </table>
+          <p id="empty" class="empty">No trades yet. Import a CSV or add one by hand.</p>
+        </div>
+        <p class="muted small">A swap from crypto to crypto counts as a sale. Use the AUD value at the time.</p>
+      </section>
+
+      <section class="stats" aria-live="polite">
+        <div class="stat"><span>Total gains</span><b id="s-gains">$0</b></div>
+        <div class="stat"><span>Losses used</span><b id="s-losses">$0</b></div>
+        <div class="stat"><span>Discount saved</span><b id="s-saved">$0</b></div>
+        <div class="stat"><span>Net capital gain</span><b id="s-net">$0</b></div>
+        <div class="stat hero"><span>Extra tax (est.)</span><b id="s-tax">$0</b></div>
+      </section>
+      <p id="carry-note" class="muted small center" hidden></p>
+      <div class="center"><button class="btn" id="copy">Copy summary</button></div>
+    </div>
+
+    <div id="panel-wait" role="tabpanel" aria-labelledby="tab-wait" hidden>
+      <section class="card">
+        <h2>One holding</h2>
+        <p class="muted">See what holding past the 12-month mark is worth, and how far the price could fall before waiting stops paying off.</p>
+        <div class="grid">
+          <label>Coin<input id="w-coin" placeholder="BTC" autocomplete="off"></label>
+          <label>Bought on<input id="w-bought" type="date"></label>
+          <label>What you paid (AUD)<input id="w-cost" inputmode="decimal" placeholder="10000"></label>
+          <label>Worth now (AUD)<input id="w-value" inputmode="decimal" placeholder="25000"></label>
+        </div>
+        <label class="check"><input type="checkbox" id="w-stack" checked> Add on top of the gains in “Tax on my trades”</label>
+      </section>
+      <section id="w-out" class="card verdict" hidden></section>
+    </div>
+
+    <p class="fine">This is an estimate only, not tax advice. It uses 2026–27 resident rates (0% / 15% / 30% / 37% / 45%) plus the 2% Medicare levy. It ignores offsets, the Medicare levy surcharge, HELP debt and personal-use asset rules. Losses are applied to non-discountable gains first, which is the ATO-friendly order. Check with a registered tax agent before you lodge.</p>
+    <p class="fine">Everything stays in your browser. Nothing is uploaded.</p>
+  </main>
+
+  <div id="toast" class="toast" role="status" hidden></div>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
